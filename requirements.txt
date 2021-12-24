@@ -1,0 +1,5 @@
+librosa
+scipy
+numpy
+matplotlib
+flask
