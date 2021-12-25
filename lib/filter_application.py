@@ -30,16 +30,18 @@ import scipy.io.wavfile as wav
 # import matplotlib.pyplot as plt
 # from numpy.polynomial.polynomial import polyval as npp_polyval
 
-if __name__=='__main__':
-    from realtimedsp import wave_file_process, packet
-else:
+if __name__.split('.')[0] == 'lib':
     from lib.realtimedsp import wave_file_process, packet
+else:
+    from realtimedsp import wave_file_process, packet
 
 COUNT = 1
+
 
 class WaveProcessor(object):
     """Process wave file using filters
     """
+
     def __init__(self, wavfile_path) -> None:
         if isinstance(wavfile_path, str):
             self.wavfile_path = wavfile_path
@@ -82,20 +84,20 @@ class WaveProcessor(object):
     def freqfilters(self, index):
         self._freqfilters.append(np.array(index).flatten())
 
-    def process_time_domain(self, inpacket, queue, parameter):  
+    def process_time_domain(self, inpacket, queue, parameter):
         curr_time = time.perf_counter()
-        if len(self._filters)==0:
+        if len(self._filters) == 0:
             return inpacket
         else:
             _, indata = inpacket.__get__()
             outdata = indata.copy()
             if self.graphical_equalizer:
-                result = np.zeros_like(outdata) 
+                result = np.zeros_like(outdata)
                 coeff = self._filters[0][0]
                 bias = self._filters[0][1]
                 self.zi = np.zeros(shape=(coeff.shape[0], 2))
-                
-                coeff = coeff.reshape(coeff.shape[0], 2, coeff.shape[1]//2)
+
+                coeff = coeff.reshape(coeff.shape[0], 2, coeff.shape[1] // 2)
                 for i, sample in enumerate(outdata):
                     ptr_zi, ptr_a, ptr_b, b, a = 0, 0, 0, 0, 1
 
@@ -107,16 +109,20 @@ class WaveProcessor(object):
                     ptr_b += 1
 
                     # middle coefficient
-                    for i in range(self.zi.shape[-1]-2):
-                        self.zi[:, ptr_zi] = sample*coeff[:, b, ptr_b] - y *coeff[: , a, ptr_a]+self.zi[:, ptr_zi+1]
+                    for i in range(self.zi.shape[-1] - 2):
+                        self.zi[:, ptr_zi] = sample * coeff[:, b, ptr_b] \
+                                            - y * coeff[:, a, ptr_a] \
+                                            + self.zi[:, ptr_zi+1]
                         ptr_a += 1
                         ptr_b += 1
                         ptr_zi += 1
 
                     # last coefficient
-                    self.zi[:, ptr_zi] = sample*coeff[:, b, ptr_b] - y *coeff[: , a, ptr_a]
+                    self.zi[:,
+                            ptr_zi] = sample * coeff[:, b, ptr_b] \
+                                    - y * coeff[:, a, ptr_a]
 
-                assert len(outdata)==len(result)
+                assert len(outdata) == len(result)
                 outdata = result
 
                 # # global COUNT
@@ -126,9 +132,8 @@ class WaveProcessor(object):
                 for f in self._filters:
                     b, a = f
                     outdata = lfilter(b, a, outdata)
-                
-            
-            self.timefilter_time.append(time.perf_counter()-curr_time)
+
+            self.timefilter_time.append(time.perf_counter() - curr_time)
             outpacket = packet()
             outpacket.timecounter = 0
             outpacket.data = outdata
@@ -136,15 +141,15 @@ class WaveProcessor(object):
 
     def process_freq_domain(self, inpacket, queue, parameter):
         curr_time = time.perf_counter()
-        if len(self._freqfilters)==0:
+        if len(self._freqfilters) == 0:
             return inpacket
         else:
             _, indata = inpacket.__get__()
             outdata = indata.copy()
             # TODO: Need to fixed for flexibility
             for idx, coeff in enumerate(self._freqfilters):
-                outdata[idx+1+56] = outdata[idx+1+56]*coeff
-            self.freqfilter_time.append(time.perf_counter()-curr_time)
+                outdata[idx + 1 + 56] = outdata[idx + 1 + 56] * coeff
+            self.freqfilter_time.append(time.perf_counter() - curr_time)
 
             outpacket = packet()
             outpacket.timecounter = 0
@@ -153,77 +158,81 @@ class WaveProcessor(object):
 
     def run(self, savefile_path) -> None:
         wave_file_process(in_file_name=self.wavfile_path,
-                        out_file_name=savefile_path,
-                        progress_bar=True,
-                        stereo=False,
-                        overlap=75,
-                        block_size=256,
-                        zero_pad=False,
-                        pre_proc_func=self.process_time_domain,
-                        freq_proc_func=self.process_freq_domain)
+                          out_file_name=savefile_path,
+                          progress_bar=True,
+                          stereo=False,
+                          overlap=75,
+                          block_size=256,
+                          zero_pad=False,
+                          pre_proc_func=self.process_time_domain,
+                          freq_proc_func=self.process_freq_domain)
 
     def process_time_domain_olivex(self, inpacket):
-            """For comparing with olivex
+        """For comparing with olivex
             Plan to delete after applying improved function
             """
-            curr_time = time.perf_counter()
-            if len(self._filters)==0:
-                return inpacket
-            else:
-                _, indata = inpacket.__get__()
-                outdata = indata.copy()
-                for f in self._filters:
-                    array = outdata
-                    b, a = f
-                    # Holder of the previous input frame (X(n))
-                    previous_input_frame = self.frame_prev
-                    # Holder of the previous output frame (Y(n))
-                    previous_output_frame = self.output_prev
-                    # The frame counter
-                    frame_counter = self.frame_counter
-                    # Output array
-                    output = []
-                    # Check if the input array is bigger than the filter order
-                    if (len(array) < len(b)) or (len(array) < len(a)): return None
-                    # Check if previous frame is empty
-                    if frame_counter == 0:
-                        previous_input_frame = [0] * len(array)
-                        previous_output_frame = [0] * len(array)
-                    # Samples loop
-                    for n in range(len(array)):
-                        # FF and FB values holder
-                        Feedback = 0
-                        Feedforward = 0
-                        # Calculating the Feedback values
-                        for i in range(1, len(a)):
-                            # Check if the previous output frame data is used
-                            if n - i < 0:
-                                Feedback = Feedback - (a[i] * previous_output_frame[-i + n])
-                            # If n>len(a)-1 then only current output frame data is used
-                            else:
-                                Feedback = Feedback - (a[i] * output[n - i])
-                        # Calculating the Feedforward values
-                        for i in range(len(b)):
-                            # Check if the previous input frame data is used
-                            if n - i < 0:
-                                Feedforward = Feedforward + (b[i] * previous_input_frame[-i + n])
-                            # If n>len(b)-1 then only current input frame data is used
-                            else:
-                                Feedforward = Feedforward + (b[i] * array[n - i])
-                        output.append((Feedforward + Feedback) / a[0])
+        curr_time = time.perf_counter()
+        if len(self._filters) == 0:
+            return inpacket
+        else:
+            _, indata = inpacket.__get__()
+            outdata = indata.copy()
+            for f in self._filters:
+                array = outdata
+                b, a = f
+                # Holder of the previous input frame (X(n))
+                previous_input_frame = self.frame_prev
+                # Holder of the previous output frame (Y(n))
+                previous_output_frame = self.output_prev
+                # The frame counter
+                frame_counter = self.frame_counter
+                # Output array
+                output = []
+                # Check if the input array is bigger than the filter order
+                if (len(array) < len(b)) or (len(array) < len(a)):
+                    return None
+                # Check if previous frame is empty
+                if frame_counter == 0:
+                    previous_input_frame = [0] * len(array)
+                    previous_output_frame = [0] * len(array)
+                # Samples loop
+                for n in range(len(array)):
+                    # FF and FB values holder
+                    Feedback = 0
+                    Feedforward = 0
+                    # Calculating the Feedback values
+                    for i in range(1, len(a)):
+                        # Check if the previous output frame data is used
+                        if n - i < 0:
+                            Feedback = Feedback - (
+                                a[i] * previous_output_frame[-i + n])
+                        # If n>len(a)-1 then only current output frame data is used
+                        else:
+                            Feedback = Feedback - (a[i] * output[n - i])
+                    # Calculating the Feedforward values
+                    for i in range(len(b)):
+                        # Check if the previous input frame data is used
+                        if n - i < 0:
+                            Feedforward = Feedforward + (
+                                b[i] * previous_input_frame[-i + n])
+                        # If n>len(b)-1 then only current input frame data is used
+                        else:
+                            Feedforward = Feedforward + (b[i] * array[n - i])
+                    output.append((Feedforward + Feedback) / a[0])
 
-                    self.frame_prev = array
-                    self.output_prev = output
-                    self.frame_counter = frame_counter + 1
-                
-                self.filter_time_olive.append(time.perf_counter()-curr_time)   
-                
-                outpacket = packet()
-                outpacket.timecounter = 0
-                outpacket.data = outdata         
-                return outpacket
+                self.frame_prev = array
+                self.output_prev = output
+                self.frame_counter = frame_counter + 1
 
-if __name__=='__main__':
+            self.filter_time_olive.append(time.perf_counter() - curr_time)
+
+            outpacket = packet()
+            outpacket.timecounter = 0
+            outpacket.data = outdata
+            return outpacket
+
+
+if __name__ == '__main__':
     import os
     from filt import CustomFilter
     from filter_analyze import FilterAnalyzePlot
@@ -234,24 +243,24 @@ if __name__=='__main__':
     fs, data = wav.read(infile_path)
 
     fft_size = 256
-    fft_band = np.arange(1, fft_size/2+1)*fs/fft_size
+    fft_band = np.arange(1, fft_size / 2 + 1) * fs / fft_size
     # fc_band = np.arange(30, 22060, 10)
     fc_band = np.array([100, 1000, 2000, 3000, 5000])
 
     ploter = FilterAnalyzePlot(sampleing_freq=fs)
     wave_processor = WaveProcessor(wavfile_path=infile_path)
 
-    outfile_path=''
-    outresult_path=''
+    outfile_path = ''
+    outresult_path = ''
 
     def plot_several_types_filters():
         """Plot the several filters
         """
         fc = 1000
         filter_custom = CustomFilter(sampling_freq=fs,
-                                cutoff_freq=fc,
-                                Qfactor=1/np.sqrt(2),
-                                gain=3)
+                                     cutoff_freq=fc,
+                                     Qfactor=1 / np.sqrt(2),
+                                     gain=3)
 
         name = 'Shelf Filter'
         # outplot_path = '/Users/seunghyunoh/workplace/document/oliveunion/주간보고_내부/filter/2_process_filter_application_py/image/filter_time_domain_type_'+str(name)+'.jpg'
@@ -265,28 +274,33 @@ if __name__=='__main__':
 
         ploter.filters = shelf_filter
 
-        ploter.plot(save_path=None, name=name)    
+        ploter.plot(save_path=None, name=name)
+
     def wav_process():
         """Comparison between time domain and frequency domain
-        """ 
+        """
         fc = 1033.59375
         # time
         filter_custom = CustomFilter(sampling_freq=fs,
-                                cutoff_freq=fc,
-                                Qfactor=10,
-                                gain=3)
+                                     cutoff_freq=fc,
+                                     Qfactor=10,
+                                     gain=3)
         peak_filter = filter_custom.peaking()
         wave_processor.filters = peak_filter
         ploter.filters = peak_filter
-        
+
         # frequency
-        idfreq = np.argwhere(fft_band==fc)
+        idfreq = np.argwhere(fft_band == fc)
         wave_processor.freqfilters = idfreq
-        
+
         # process
         outfile_path = '2_process_filter_application_py/test.wav'
         outresult_path = os.path.join(result_path, outfile_path)
         wave_processor.run(savefile_path=outresult_path)
 
-        print(sum(wave_processor.freqfilter_time)/len(wave_processor.freqfilter_time))
-        print(sum(wave_processor.timefilter_time)/len(wave_processor.timefilter_time))
+        print(
+            sum(wave_processor.freqfilter_time) /
+            len(wave_processor.freqfilter_time))
+        print(
+            sum(wave_processor.timefilter_time) /
+            len(wave_processor.timefilter_time))

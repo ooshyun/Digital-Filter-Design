@@ -2,9 +2,11 @@
 """
 import sys, time
 
+
 def track_time(func):
     """Track the function time
     """
+
     def new_func(*args, **kwargs):
         start_time = time.perf_counter()
         func(*args, **kwargs)
@@ -14,7 +16,13 @@ def track_time(func):
 
     return new_func
 
-def print_progress (iteration, total, prefix = '', suffix = '', decimals = 1, barLength = 100):
+
+def print_progress(iteration,
+                   total,
+                   prefix='',
+                   suffix='',
+                   decimals=1,
+                   barLength=100):
     """Progress Bar
         This library provides an easy progress bar implementation for refence in the
         terminal. This function should be called everytime the value needs to be 
@@ -39,13 +47,15 @@ def print_progress (iteration, total, prefix = '', suffix = '', decimals = 1, ba
         sys.stdout.write('\n')
     sys.stdout.flush()
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     """Time tracking example"""
+
     @track_time
     def hello(name):
         print(f"Hello Guys, I'm {name}")
-    hello("Cesar")
 
+    hello("Cesar")
     """Progress bar example"""
     total = 10e3
     for i in range(int(total)):

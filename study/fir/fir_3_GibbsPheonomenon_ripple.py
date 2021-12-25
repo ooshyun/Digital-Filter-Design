@@ -10,9 +10,6 @@ from scipy.io.wavfile import write
 import scipy.signal
 # from scipy.signal import get_window
 
-from slib.python.debug.log import maker_logger
-_logger = maker_logger()
-
 samplingFreq = 32
 
 bandwidth = 8

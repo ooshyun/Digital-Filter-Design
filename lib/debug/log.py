@@ -13,17 +13,18 @@ with open(f"{debug_path}logging.json", "rt") as file:
 LOG_FORMAT = "[%(asctime)-10s] (line %(lineno)d) %(name)s:%(levelname)s - %(message)s"
 logging.config.dictConfig(config)
 
+
 def maker_logger(name=None):
     #1 logger instance
     logger = logging.getLogger(name)
-    
+
     #2 logger level > The lowest level DEBUG
     logger.setLevel(logging.DEBUG)
 
     #3 Set formatter
     formatter = logging.Formatter(LOG_FORMAT)
 
-    #4 Create the handelr instance 
+    #4 Create the handelr instance
     console = logging.StreamHandler()
     file_handler = logging.FileHandler(filename=f"{debug_path}test.log")
 
@@ -41,7 +42,8 @@ def maker_logger(name=None):
 
     return logger
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     _logger = maker_logger()
 
     _logger.debug("test")

@@ -13,20 +13,22 @@
 """
 from math import inf
 import numpy as np
-from scipy.signal import freqz #, freqs, tf2sos, sosfreqz, tf2zpk
+from scipy.signal import freqz    #, freqs, tf2sos, sosfreqz, tf2zpk
 import matplotlib.pyplot as plt
 
 # from matplotlib.ticker import MultipleLocator
 # from scipy.signal.filter_design import sos2tf
 
-if __name__=='__main__':
-    from util import plot_freqresp
-else:
+if __name__.split('.')[0] == 'lib':
     from lib.util import plot_freqresp
+else:
+    from util import plot_freqresp
+
 
 class FilterAnalyzePlot(object):
     """Analyze filters using plot
     """
+
     def __init__(self, sampleing_freq) -> None:
         self._filters = []
         self.sampleing_freq = sampleing_freq
@@ -67,27 +69,32 @@ class FilterAnalyzePlot(object):
 
         fs = self.sampleing_freq
         fticks = 1000 * 2.**np.arange(-6, 5, 1)
-        fticks = np.append(fticks, (fs/2))
-        fticklabels = ['15.','31.', '62.','125', '250', '500', '1k', '2k', '4k','8k', '16k', str(int((fs/2)//1000))+'k']
+        fticks = np.append(fticks, (fs / 2))
+        fticklabels = [
+            '15.', '31.', '62.', '125', '250', '500', '1k', '2k', '4k', '8k',
+            '16k',
+            str(int((fs / 2) // 1000)) + 'k'
+        ]
         flim = min(fticks), max(fticks)
 
-        # TODO: Seperate to another function 
+        # TODO: Seperate to another function
         if self.series_equalizer:
-            h=1.
-            w=None
+            h = 1.
+            w = None
             for data in self._filters:
                 b, a = data
-                w, h_data = freqz(b, a, worN=2048*8) # TODO: How to treat phase ?
+                w, h_data = freqz(b, a,
+                                  worN=2048 * 8)    # TODO: How to treat phase ?
                 h *= h_data
             w_total.append(w)
             h_total.append(h)
         else:
             for data in self._filters:
                 b, a = data
-                w, h = freqz(b, a, worN=2048*8)
+                w, h = freqz(b, a, worN=2048 * 8)
                 w_total.append(w)
                 h_total.append(h)
-        
+
         # Plot
         if type == 'all':
             ncols = 2
@@ -95,28 +102,50 @@ class FilterAnalyzePlot(object):
             ncols = 1
 
         _, ax = plt.subplots(figsize=(18, 7),
-                    ncols=ncols,
-                    gridspec_kw={'wspace': 0.25})
+                             ncols=ncols,
+                             gridspec_kw={'wspace': 0.25})
 
         for w, h in zip(w_total, h_total):
-            freq=w * fs * 1.0 / (2 * np.pi)
-            h[np.argwhere(h==0)] = -inf
-            
+            freq = w * fs * 1.0 / (2 * np.pi)
+            h[np.argwhere(h == 0)] = -inf
+
             if type == 'all':
-                plot_freqresp(ax[0], freq, 20*np.log(h), 
-                        xaxis=fticks, xlim=flim,  xlabels=fticklabels,
-                        xtitle='Frequency in Hz', ytitle='Level in dB')
-                plot_freqresp(ax[1], freq, np.angle(h, deg=True), 
-                         xaxis=fticks, xlim=flim,  xlabels=fticklabels,
-                         ylim=(-180, 180), xtitle='Frequency in Hz', ytitle='Phase in degree')
-            elif type=='gain':
-                plot_freqresp(ax, freq, 20*np.log(h), 
-                        xaxis=fticks, xlim=flim,  xlabels=fticklabels,
-                        xtitle='Frequency in Hz', ytitle='Level in dB')
-            elif type=='phase':
-                plot_freqresp(ax, freq, np.angle(h, deg=True), 
-                        xaxis=fticks, xlim=flim,  xlabels=fticklabels,
-                        ylim=(-180, 180), xtitle='Frequency in Hz', ytitle='Phase in degree')
+                plot_freqresp(ax[0],
+                              freq,
+                              20 * np.log(h),
+                              xaxis=fticks,
+                              xlim=flim,
+                              xlabels=fticklabels,
+                              xtitle='Frequency in Hz',
+                              ytitle='Level in dB')
+                plot_freqresp(ax[1],
+                              freq,
+                              np.angle(h, deg=True),
+                              xaxis=fticks,
+                              xlim=flim,
+                              xlabels=fticklabels,
+                              ylim=(-180, 180),
+                              xtitle='Frequency in Hz',
+                              ytitle='Phase in degree')
+            elif type == 'gain':
+                plot_freqresp(ax,
+                              freq,
+                              20 * np.log(h),
+                              xaxis=fticks,
+                              xlim=flim,
+                              xlabels=fticklabels,
+                              xtitle='Frequency in Hz',
+                              ytitle='Level in dB')
+            elif type == 'phase':
+                plot_freqresp(ax,
+                              freq,
+                              np.angle(h, deg=True),
+                              xaxis=fticks,
+                              xlim=flim,
+                              xlabels=fticklabels,
+                              ylim=(-180, 180),
+                              xtitle='Frequency in Hz',
+                              ytitle='Phase in degree')
             else:
                 raise ValueError('type must be gain or phase')
 
@@ -140,7 +169,6 @@ class FilterAnalyzePlot(object):
             # ax[2].xaxis.set_major_locator(MultipleLocator(0.1))
             # ax[2].yaxis.set_major_locator(MultipleLocator(0.1))
 
-
         if name is not None:
             plt.title(name)
 
@@ -150,16 +178,15 @@ class FilterAnalyzePlot(object):
         else:
             plt.savefig(save_path)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     from filt import CustomFilter
     fs = 44100
     fc = 1000
 
     ploter = FilterAnalyzePlot(sampleing_freq=fs)
-    
     """ Custom filter analysis"""
-    filter_custom = CustomFilter(sampling_freq=fs,
-                                cutoff_freq=fc)
+    filter_custom = CustomFilter(sampling_freq=fs, cutoff_freq=fc)
     b_coeff, a_coeff = filter_custom.highpass()
     print(f"Cofficient: {b_coeff, a_coeff}")
 

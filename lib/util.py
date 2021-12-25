@@ -18,6 +18,7 @@ import librosa
 import scipy.io.wavfile as wav
 from scipy.fftpack import *
 
+
 def halfpadloss_shelving_filter_num_den_coeff(G):
     """Half-pad-loss polynomial coefficients for 1st/2nd order shelving filter.
 
@@ -29,21 +30,21 @@ def halfpadloss_shelving_filter_num_den_coeff(G):
     """
     # when G is lower than 3dB, the original has problem -> this is possible
     # sign = 1(positive), 0(zero), -1(negative)
-    sign = np.sign(G)  # amplify/boost (1) or attenuate/cut (-1)
-    g = 10**(np.abs(G) / 20)  # linear gain
-    n1, n2 = g**(sign / 4), g**(sign / 2)  # numerator coeff
-    d1, d2 = 1 / n1, 1 / n2  # denominator coeff
+    sign = np.sign(G)    # amplify/boost (1) or attenuate/cut (-1)
+    g = 10**(np.abs(G) / 20)    # linear gain
+    n1, n2 = g**(sign / 4), g**(sign / 2)    # numerator coeff
+    d1, d2 = 1 / n1, 1 / n2    # denominator coeff
     return n1, n2, d1, d2
 
 
-def normalized_low_shelving_1st_coeff(G=-10*np.log10(2)):
+def normalized_low_shelving_1st_coeff(G=-10 * np.log10(2)):
     """See low_shelving_1st_coeff() for omega=1."""
     n1, n2, d1, d2 = halfpadloss_shelving_filter_num_den_coeff(G)
     b, a = np.array([0, 1, n2]), np.array([0, 1, d2])
     return b, a
 
 
-def low_shelving_1st_coeff(omega=1, G=-10*np.log10(2)):
+def low_shelving_1st_coeff(omega=1, G=-10 * np.log10(2)):
     """Half-pad-loss/mid-level low shelving filter 1st order.
 
     Parameters
@@ -61,18 +62,18 @@ def low_shelving_1st_coeff(omega=1, G=-10*np.log10(2)):
 
     """
     b, a = normalized_low_shelving_1st_coeff(G=G)
-    scale = omega**np.arange(-2., 1.)  # powers in the Laplace domain
+    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
     return b * scale, a * scale
 
 
-def normalized_high_shelving_1st_coeff(G=-10*np.log10(2)):
+def normalized_high_shelving_1st_coeff(G=-10 * np.log10(2)):
     """See high_shelving_1st_coeff() for omega=1."""
     n1, n2, d1, d2 = halfpadloss_shelving_filter_num_den_coeff(G)
     b, a = np.array([0, n2, 1]), np.array([0, d2, 1])
     return b, a
 
 
-def high_shelving_1st_coeff(omega=1, G=-10*np.log10(2)):
+def high_shelving_1st_coeff(omega=1, G=-10 * np.log10(2)):
     """Half-pad-loss/mid-level high shelving filter 1st order.
 
     Parameters
@@ -90,18 +91,18 @@ def high_shelving_1st_coeff(omega=1, G=-10*np.log10(2)):
 
     """
     b, a = normalized_high_shelving_1st_coeff(G=G)
-    scale = omega**np.arange(-2., 1.)  # powers in the Laplace domain
+    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
     return b * scale, a * scale
 
 
-def normalized_low_shelving_2nd_coeff(G=-10*np.log10(2), Q=1/np.sqrt(2)):
+def normalized_low_shelving_2nd_coeff(G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
     """See low_shelving_2nd_coeff() for omega=1."""
     n1, n2, d1, d2 = halfpadloss_shelving_filter_num_den_coeff(G)
     b, a = np.array([1, n1 / Q, n2]), np.array([1, d1 / Q, d2])
     return b, a
 
 
-def low_shelving_2nd_coeff(omega=1, G=-10*np.log10(2), Q=1/np.sqrt(2)):
+def low_shelving_2nd_coeff(omega=1, G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
     """Half-pad-loss/mid-level low shelving filter 2nd order.
 
     Parameters
@@ -120,7 +121,7 @@ def low_shelving_2nd_coeff(omega=1, G=-10*np.log10(2), Q=1/np.sqrt(2)):
 
     """
     b, a = normalized_low_shelving_2nd_coeff(G=G, Q=Q)
-    scale = omega**np.arange(-2., 1.)  # powers in the Laplace domain
+    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
 
     # Debugging
     # print(f'omega: {omega}, range {np.arange(-2., 1.)}, scale: {scale}')
@@ -128,14 +129,14 @@ def low_shelving_2nd_coeff(omega=1, G=-10*np.log10(2), Q=1/np.sqrt(2)):
     return b * scale, a * scale
 
 
-def normalized_high_shelving_2nd_coeff(G=-10*np.log10(2), Q=1/np.sqrt(2)):
+def normalized_high_shelving_2nd_coeff(G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
     """See high_shelving_2nd_coeff() for omega=1."""
     n1, n2, d1, d2 = halfpadloss_shelving_filter_num_den_coeff(G)
     b, a = np.array([n2, n1 / Q, 1]), np.array([d2, d1 / Q, 1])
     return b, a
 
 
-def high_shelving_2nd_coeff(omega=1, G=-10*np.log10(2), Q=1/np.sqrt(2)):
+def high_shelving_2nd_coeff(omega=1, G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
     """Half-pad-loss/mid-level high shelving filter 2nd order.
 
     Parameters
@@ -154,7 +155,7 @@ def high_shelving_2nd_coeff(omega=1, G=-10*np.log10(2), Q=1/np.sqrt(2)):
 
     """
     b, a = normalized_high_shelving_2nd_coeff(G=G, Q=Q)
-    scale = omega**np.arange(-2., 1.)  # powers in the Laplace domain
+    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
     return b * scale, a * scale
 
 
@@ -278,7 +279,7 @@ def check_shelving_filter_validity(biquad_per_octave, **kwargs):
 
     # biquad_per_octave must be large enough
     # for slope < 12.04 dB at least one biquad per ocatve is required
-    tmp = slope / (20*np.log10(4))
+    tmp = slope / (20 * np.log10(4))
     if tmp > 1.:
         if biquad_per_octave < tmp:
             flag[2] = False
@@ -318,8 +319,11 @@ def high_shelving_1st_cascade(w0, Gb, num_biquad, biquad_per_octave):
     return sos
 
 
-def low_shelving_2nd_cascade(w0, Gb, num_biquad, biquad_per_octave,
-                             Q=1/np.sqrt(2)):
+def low_shelving_2nd_cascade(w0,
+                             Gb,
+                             num_biquad,
+                             biquad_per_octave,
+                             Q=1 / np.sqrt(2)):
     """Low shelving filter design using cascaded biquad filters.
 
     Parameters
@@ -345,15 +349,19 @@ def low_shelving_2nd_cascade(w0, Gb, num_biquad, biquad_per_octave,
     """
     sos = np.zeros((num_biquad, 6))
     for m in range(num_biquad):
-        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave) # key point it connected '2' value
+        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave
+                     )    # key point it connected '2' value
         # sheving coff
         b, a = low_shelving_2nd_coeff(omega=wm, G=Gb, Q=Q)
         sos[m] = tf2sos(b, a)
     return sos
 
 
-def high_shelving_2nd_cascade(w0, Gb, num_biquad, biquad_per_octave,
-                              Q=1/np.sqrt(2)):
+def high_shelving_2nd_cascade(w0,
+                              Gb,
+                              num_biquad,
+                              biquad_per_octave,
+                              Q=1 / np.sqrt(2)):
     """High shelving filter design using cascaded biquad filters.
 
     - see low_shelving_2nd_cascade()
@@ -437,8 +445,8 @@ def matchedz_zpk(s_zeros, s_poles, s_gain, fs):
     z_poles = np.exp(s_poles / fs)
 
     omega = 1j * np.pi * fs
-    s_gain *= np.prod((omega - s_zeros) / (omega - s_poles)
-                      * (-1 - z_poles) / (-1 - z_zeros))
+    s_gain *= np.prod(
+        (omega - s_zeros) / (omega - s_poles) * (-1 - z_poles) / (-1 - z_zeros))
     return z_zeros, z_poles, np.abs(s_gain)
 
 
@@ -524,8 +532,10 @@ def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control,
         D = 2 * W2 * (G01 - np.sqrt(G00 * G11))
         A = np.sqrt((C + D) / F)
         B = np.sqrt((gp2 * C + gb2 * D) / F)
-        num = np.array([gn+W2+B, -2*(gn-W2), (gn-B+W2)]) / (1+W2+A)
-        den = np.array([1, -2*(1-W2)/(1+W2+A), (1+W2-A)/(1+W2+A)])
+        num = np.array([gn + W2 + B, -2 * (gn - W2),
+                        (gn - B + W2)]) / (1 + W2 + A)
+        den = np.array(
+            [1, -2 * (1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
         H = (num[0] + num[1]*z1 + num[2]*z2)\
             / (den[0] + den[1]*z1 + den[2]*z2)
         G = db(H) / Gp
@@ -572,10 +582,9 @@ def peq_seg(g_ref, g_nyquist, g, g_bandwidth, w_command, bandwidth):
     A = np.sqrt((C + D) / F)
     B = np.sqrt((g**2 * C + g_bandwidth**2 * D) / F)
 
-    b = np.array([(g_nyquist + g_ref * W2 + B),
-                  -2*(g_nyquist - g_ref * W2),
+    b = np.array([(g_nyquist + g_ref * W2 + B), -2 * (g_nyquist - g_ref * W2),
                   (g_nyquist - B + g_ref * W2)]) / (1 + W2 + A)
-    a = np.array([1, -2*(1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
+    a = np.array([1, -2 * (1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
     return b, a
 
 
@@ -612,8 +621,8 @@ def optimized_peq_seg(gain_command, gain_proto, gain_factor, w_command,
     gain_control[1::2] = 0.5 * (gain_command[:-1] + gain_command[1:])
 
     # interaction matrix "B"
-    B = interaction_matrix_sge(gain_proto, gain_factor,
-                               w_command, w_control, bandwidth)
+    B = interaction_matrix_sge(gain_proto, gain_factor, w_command, w_control,
+                               bandwidth)
 
     gain2 = np.zeros((2 * num_command - 1, 1))
     gain2[::2, 0] = gain_command
@@ -719,8 +728,8 @@ def effective_order(w1, w2, Gd, rB=None):
         Gain per octave.
     """
     if rB is None:
-        rB = db(2) * np.sign(Gd)  # Butterworth
-    return Gd / rB / np.log2(w2/w1)
+        rB = db(2) * np.sign(Gd)    # Butterworth
+    return Gd / rB / np.log2(w2 / w1)
 
 
 def complex_zp_angles(n_int, n_frac):
@@ -735,11 +744,11 @@ def complex_zp_angles(n_int, n_frac):
         Fractional order [0, 1).
     """
     # linear interpolation of angles
-    num_zp_pair = int(n_int+1) // 2
-    return np.pi/2 * np.stack([
-            (1-n_frac) * (1 + (2*m+1)/n_int)
-            + n_frac * (1 + (2*m+1)/(n_int+1))
-            for m in range(num_zp_pair)])
+    num_zp_pair = int(n_int + 1) // 2
+    return np.pi / 2 * np.stack([(1 - n_frac) * (1 +
+                                                 (2 * m + 1) / n_int) + n_frac *
+                                 (1 + (2 * m + 1) / (n_int + 1))
+                                 for m in range(num_zp_pair)])
 
 
 def real_zp(n_int, n_frac, w_lower, w_upper):
@@ -768,13 +777,14 @@ def real_zp(n_int, n_frac, w_lower, w_upper):
     ratio = (w_upper / w_lower)
 
     # logarithmic interpolation of zero/pole radius
-    if n_int % 2 == 0:  # even
-        s_lower = -w_mean * ratio**(-n_frac/2)
-        s_upper = -w_mean * ratio**(n_frac/2)
-    elif n_int % 2 == 1:  # odd
-        s_lower = -w_lower * ratio**(n_frac/2)
-        s_upper = -w_upper * ratio**(-n_frac/2)
+    if n_int % 2 == 0:    # even
+        s_lower = -w_mean * ratio**(-n_frac / 2)
+        s_upper = -w_mean * ratio**(n_frac / 2)
+    elif n_int % 2 == 1:    # odd
+        s_lower = -w_lower * ratio**(n_frac / 2)
+        s_upper = -w_upper * ratio**(-n_frac / 2)
     return s_lower, s_upper
+
 
 # Custom functions
 def cvt_pcm2wav(from_file, to_file, sampling_freq, dtype):
@@ -783,9 +793,10 @@ def cvt_pcm2wav(from_file, to_file, sampling_freq, dtype):
     """
     with open(from_file, 'rb') as opened_pcm_file:
         buf = opened_pcm_file.read()
-        pcm_data = np.frombuffer(buf, dtype = dtype)
+        pcm_data = np.frombuffer(buf, dtype=dtype)
         wav_data = librosa.util.buf_to_float(pcm_data, 2)
     wav.write(to_file, sampling_freq, wav_data)
+
 
 def hilbert_from_scratch(u):
     # N : fft length, M : number of elements to zero out
@@ -794,22 +805,23 @@ def hilbert_from_scratch(u):
 
     # take forward Fourier transform
     U = fft(u)
-    M = N - N//2 - 1
-    
+    M = N - N // 2 - 1
+
     # zero out negative frequency components
-    U[N//2+1:] = [0] * M
-    
+    U[N // 2 + 1:] = [0] * M
+
     # double fft energy except @ DC0
-    U[1:N//2] = 2 * U[1:N//2]
-    
+    U[1:N // 2] = 2 * U[1:N // 2]
+
     # take inverse Fourier transform
     v = ifft(U)
     return v
 
+
 def cvt2float(coeff):
     from lib.fi import fi
     coeff = np.array(coeff).tolist()
-        
+
     for location in range(len(coeff)):
         for i in range(len(coeff[location])):
             coeff[location][i] = fi(coeff[location][i], 1, 32, 30, 1, 'Hex')
@@ -817,12 +829,13 @@ def cvt2float(coeff):
     for location in range(len(coeff)):
         print("{", end='')
         for i in range(len(coeff[location])):
-            print(coeff[location][i],end='')
-            if i==len(coeff[location])-1:
+            print(coeff[location][i], end='')
+            if i == len(coeff[location]) - 1:
                 continue
             else:
-                print(', ',end='')
+                print(', ', end='')
         print("}")
+
 
 def char2num(array: list):
     for i in range(len(array)):
@@ -838,7 +851,18 @@ def char2num(array: list):
             else:
                 raise ValueError('Wrong type')
 
-def plot_freqresp(ax: plt.axes, x, y, xaxis, xlim, xlabels, xtitle=None, yaxis=None, ylim=None, ylabels=None, ytitle=None):
+
+def plot_freqresp(ax: plt.axes,
+                  x,
+                  y,
+                  xaxis,
+                  xlim,
+                  xlabels,
+                  xtitle=None,
+                  yaxis=None,
+                  ylim=None,
+                  ylabels=None,
+                  ytitle=None):
     # ax.semilogx(x, y)
     ax.plot(x, y)
     ax.set_xscale('log')
@@ -852,10 +876,21 @@ def plot_freqresp(ax: plt.axes, x, y, xaxis, xlim, xlabels, xtitle=None, yaxis=N
     ax.set_xlabel(xtitle)
     ax.set_ylabel(ytitle)
 
+
 class PlotProfile(object):
-    def __init__(self, x, y, type='scatter', marker=None, color=None, 
-                    xlim=None, ylim=None, xscale=None, yscale=None,
-                    label=None, grid=None):
+
+    def __init__(self,
+                 x,
+                 y,
+                 type='scatter',
+                 marker=None,
+                 color=None,
+                 xlim=None,
+                 ylim=None,
+                 xscale=None,
+                 yscale=None,
+                 label=None,
+                 grid=None):
         self.x = x
         self.y = y
         self.type = type
