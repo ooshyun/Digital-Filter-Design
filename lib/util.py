@@ -843,7 +843,10 @@ def char2num(array: list):
             char2num(array[i])
         else:
             if isinstance(array[i], str):
-                array[i] = float(array[i])
+                if 'j' in array[i]:
+                    array[i] = complex(array[i])
+                else:
+                    array[i] = float(array[i])
             elif isinstance(array[i], float):
                 pass
             elif isinstance(array[i], int):

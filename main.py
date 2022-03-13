@@ -31,15 +31,14 @@ from numpy import dtype, log10, pi, log2, sqrt
 from lib.filter_analyze import FilterAnalyzePlot
 from lib.filter_application import WaveProcessor
 from lib.graphic_equalizer import GraphicalEqualizer
-from lib.debug.log import maker_logger
+from lib.debug.log import PRINTER
 import scipy.signal
 import math, time
+from lib.config import *
 
 from lib.util import hilbert_from_scratch, cvt2float, cvt_pcm2wav, char2num
 from lib.fi import fi
-
 ROOT = os.getcwd()
-
 
 def plot_cascade_sheving_filter():
     """ Cascade biquad 2nd order sheving filter
@@ -678,7 +677,7 @@ def example_2ndinterpolation():
     plt.show()
 
 
-def test_hilber_from_scratch_time_domain():
+def test_hilbert_from_scratch_time_domain():
     """Test hilbert transform from time-domain signal
     """
     N = 32
@@ -700,78 +699,220 @@ def test_hilber_from_scratch_time_domain():
     t = np.arange(0, N)
 
     y_fft = fft(y)
+    y_fft = y_fft[:len(y_fft) // 2 +1]
 
     z1_fft = fft(z1)
     z2_fft = fft(z2)
     z3_fft = fft(z3)
 
+    z1_fft = z1_fft[:len(z1_fft) // 2 +1]
+    z2_fft = z2_fft[:len(z2_fft) // 2 +1]
+    z3_fft = z3_fft[:len(z3_fft) // 2 +1]
+
     fig, ax = plt.subplots(nrows=3)
     ax[0].plot(t, y, label='y')
-    ax[0].plot(t, z1.imag, label='z1')
-    # ax[0].plot(t, z2, label='z2')
+    # ax[0].plot(t, z1.imag, label='z1')
+    ax[0].plot(t, z2, label='z2')
     # ax[0].plot(t, z3, label='z3')
 
+    t = t[:len(t) // 2 +1]
     ax[1].plot(t, 20 * np.log10(np.abs(y_fft)), label='y')
-    ax[1].plot(t, np.abs(z1_fft), label='z1')
-    # ax[1].plot(t, 20*np.log10(np.abs(z2_fft)), label='z2')
+    # ax[1].plot(t, np.abs(z1_fft), label='z1')
+    ax[1].plot(t, 20*np.log10(np.abs(z2_fft)), label='z2')
     # ax[1].plot(t, np.abs(z3_fft), label='z3')
 
-    ax[2].plot(t, np.angle(y_fft), label='y')
-    ax[2].plot(t, np.angle(z1_fft), label='z1')
-    # ax[2].plot(t, np.angle(z2_fft), label='z2')
-    # ax[2].plot(t, np.angle(z3_fft), label='z3')
+    ax[2].plot(t, np.angle(y_fft, deg=True), label='y')
+    # ax[2].plot(t, np.angle(z1_fft, deg=True), label='z1')
+    ax[2].plot(t, np.angle(z2_fft, deg=True), label='z2')
+    # ax[2].plot(t, np.angle(z3_fft, deg=True), label='z3')
 
     plt.show()
 
 
-def test_hilber_from_scratch_frequency_response():
+def test_hilbert_from_scratch_frequency_response():
     """Test hilbert transform from frequency-domain amplitude
+        Reference. Understanding Digital Signal Processing 441 page
     """
     N = 32
-    f = 1
+    f = np.arange(1, 5)
     dt = 1.0 / N
     y = []
     for n in range(N):
-        x = 2 * math.pi * f * dt * n
-        y.append(2 * math.sin(x))
+        y_one = sum([math.sin(2 * math.pi * freq * dt * n) / len(f) for freq in f]) 
+        y.append(y_one)
     y_fft = np.fft.fft(y)
-    y_fft_real = np.abs(y_fft)
+    data_fft = y_fft
 
     # Method 1. iFFT -> disgard imag -> hilbert -> FFT
-    y_fft_real_HT = y_fft_real.copy()
+    y_fft_real_HT = data_fft.copy() * 2.0
     y_fft_real_HT[len(y_fft_real_HT) // 2 + 1:] = 0
     y_fft_real_HT[0] /= 2
     y_fft_real_HT[len(y_fft_real_HT) // 2] /= 2
-    y_HT = np.fft.ifft(y_fft_real_HT)
-    y_HT = scipy.signal.hilbert(y_HT.real)
-    y_fft_HT = np.fft.fft(y_HT)
 
+    y_HT = np.fft.ifft(y_fft_real_HT)
+
+    # y_HT = scipy.signal.hilbert(y_HT.real)
+    y_fft_HT = np.fft.fft(y_HT)
+    
     # Method 2. irFFT -> hilbert -> rFFT
-    y_HT2 = np.fft.irfft(y_fft_real[:len(y_fft_real // 2 + 1)],
-                         n=len(y_fft_real))
-    y_HT2 = scipy.signal.hilbert(y_HT2)
+    y_HT2 = np.fft.irfft(y_fft_real_HT[:len(data_fft // 2 + 1)],
+                         n=len(data_fft))
+    # y_HT2 = scipy.signal.hilbert(y_HT2)
     y_fft_HT2 = np.fft.rfft(y_HT2)
 
     x = np.arange(N)
     fig, (ax0, ax1, ax2) = plt.subplots(nrows=3)
-    ax0.plot(y_fft_real, "*", label='fft signal')
-    ax0.plot(y_fft_real_HT, "o", label='fft signal_real_Hilbert Transform')
-    ax0.plot(y_fft_HT, "x", label='fft signal_Hilbert Transform')
-    ax0.plot(y_fft_HT2, "s", label='rfft signal_Hilbert Transform')
+    ax0.plot(np.abs(data_fft), "*", label='fft signal')
+    ax0.plot(np.abs(y_fft_HT), "x", label='fft signal_Hilbert Transform')
+    ax0.plot(np.abs(y_fft_HT2), "s", label='rfft signal_Hilbert Transform')
     ax0.legend()
 
-    ax1.plot(np.angle(y_fft_real, deg=True))
-    ax1.plot(np.angle(y_fft_real_HT, deg=True))
+    ax1.plot(np.angle(data_fft, deg=True))
     ax1.plot(np.angle(y_fft_HT, deg=True))
     ax1.plot(np.angle(y_fft_HT2, deg=True))
     fig.tight_layout()
 
     ax2.plot(y, "*", label='fft signal')
     ax2.plot(y_HT.imag, "o", label='fft signal_Hilbert Transform')
-    ax2.plot(y_HT2.real, "s", label='rfft signal_Hilbert Transform')
+    # ax2.plot(y_HT2, "s", label='rfft signal_Hilbert Transform')
     ax2.legend()
     plt.show()
 
+
+def example_hilbert_signal():
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from scipy.signal import hilbert, chirp
+    duration = 1.0
+    fs = 400.0
+    samples = int(fs*duration)
+    t = np.arange(samples) / fs
+
+    # We create a chirp of which the frequency increases from 20 Hz to 100 Hz and
+    # apply an amplitude modulation.
+
+    signal = chirp(t, 20.0, t[-1], 100.0)
+    signal *= (1.0 + 0.5 * np.sin(2.0*np.pi*3.0*t) )
+
+    # The amplitude envelope is given by magnitude of the analytic signal. The
+    # instantaneous frequency can be obtained by differentiating the
+    # instantaneous phase in respect to time. The instantaneous phase corresponds
+    # to the phase angle of the analytic signal.
+
+    analytic_signal = hilbert(signal)
+    amplitude_envelope = np.abs(analytic_signal)
+    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
+    instantaneous_frequency = (np.diff(instantaneous_phase) /
+                        (2.0*np.pi) * fs)
+
+    fig, (ax0, ax1) = plt.subplots(nrows=2)
+    ax0.plot(t, signal, label='signal')
+    ax0.plot(t, amplitude_envelope, label='envelope')
+    ax0.set_xlabel("time in seconds")
+    ax0.legend()
+    ax1.plot(t[1:], instantaneous_frequency)
+    ax1.set_xlabel("time in seconds")
+    ax1.set_ylim(0.0, 120.0)
+    fig.tight_layout()
+    plt.show()
+
+def example_hilbert_transform():
+    """
+    TODO:
+        노션 정리
+            1. hilbert transform
+                Analytic signal is 
+                    x_c(t) = x_r(t) + j*x_i(t)
+                    x_i(t): hilbert transform of x_r(t)
+                
+                Usage
+                1. Amplitude Modulation
+                2. Phase Modulation
+
+                Q0. 어떻게 warping이 가능한거지? 
+                    - e^{-jw}
+                Q1. 단일 주파수에서만 가능한건가? 
+                    - It is possible to the signal which can be analyized by FFT.
+                Q2. 왜 iFFT를 하는 거지? 주파수 도메인에서도 충분히 가능할텐데 ?
+                    - Maybe.. for getting analytic signal from real signal - Need to test in graphic_equalizer.py
+            
+            2. minimum transfer function using hilbert transform
+
+            3. Moore-Penrose pseudo-inverse
+
+            4. Moore-Penrose pseudo-inverse to Transpose Computation
+
+    """
+    t = np.linspace(0, 6, 1000)
+    f = 1000
+    w0 = 2 * np.pi * f
+    y = np.cos(w0*t)
+    axis=-1
+    N = y.shape[axis]
+    y_analytic = signal.hilbert(y)
+    y_hilbert = y_analytic.imag
+
+    fft_y = np.fft.fft(y)
+    fft_hilbert = np.fft.fft(y_hilbert)
+    fft_hilbert = np.fft.rfft(y_hilbert)
+    fft_analytic = np.fft.fft(y_analytic)
+    
+    """ j effect to fft"""
+    """
+        왜 fft에서 e^{-jtheta} 일까?
+        j 앞에 -가 붙은 이유는 복소수에서의 내적은 어느 한쪽에 켤레(conjugate) 복소수를 취한 후 계산되기 때문이다.
+        - https://darkpgmr.tistory.com/171
+    """
+    t = np.linspace(0, 6, 1000)
+    f = 3000
+    w0 = -2 * np.pi * f
+    y = np.cos(w0*t)
+    y_effect = y - 1j*np.sin(w0*t)
+
+    fft_y = np.fft.fft(y)
+    fft_effect = np.fft.fft(y_effect)
+
+    fig, ax = plt.subplots(nrows=2, ncols=2)
+    
+    ax[0][0].plot(t, fft_y, label='amplitude')
+    ax[1][0].plot(t, fft_effect, label='amplitude')
+    
+    ax[0][1].plot(t, np.angle(fft_y, deg=True), label='phase')
+    ax[1][1].plot(t, np.angle(fft_effect, deg=True), label='phase')
+
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(projection='3d')
+
+    # ax.plot(t, np.ones_like(t)*2, y_analytic.imag)
+    # ax.plot(t, y_analytic.real, y_analytic.imag)
+    # ax.plot(t, y_analytic.real, np.ones_like(t)*(-2))
+
+    # ax.set_xlim(-1, max(t)+1)
+    # ax.set_ylim(-2, 2)
+    # ax.set_zlim(-2, 2)
+
+    # _, (ax0, ax1) = plt.add_subplots(nrows=2, ncols=2)
+
+    # ax0[0].plot(t, y, "*", label='y')
+    # ax0[0].plot(t, y_analytic, "*", label='analytic signal')
+    
+    # ax1[0].plot(t, y, label='y')
+    # ax1[0].plot(t, y_analytic.imag, label='analytic signal')
+
+    # ax0[1].plot(t, np.abs(fft_y), "*", label='y')
+    # ax0[1].plot(t, np.abs(fft_analytic), "*", label='analytic signal')
+    # ax0[1].plot(np.abs(fft_hilbert), "*", label='hilbert transform')
+    
+    # ax1[1].plot(np.angle(fft_y), label='y')
+    # ax1[1].plot(t, np.angle(fft_analytic), label='analytic signal')
+    # ax1[1].plot(np.angle(fft_hilbert), label='hilbert transform')
+
+    # for _ax0, _ax1 in zip(ax0, ax1):
+    #     for ax in (_ax0, _ax1):
+    #         ax.legend()
+    
+    plt.show()
 
 def test_even_odd_cross_matrix_1d():
     """Test (5, 3, 1) <-> (5, 2) in 1D
@@ -830,8 +971,8 @@ def iir_filter_mulitstage_plot_parallel(file):
     """Test the frequency response of parallel structure of iir filter 
     """
     # set the target
-    data_path = '/Users/seunghyunoh/workplace/study/FilterDesign/ExampleMusic/'
-    infile_path = os.path.join(data_path, 'test_noise_tx_in.wav')
+    data_path = '/Users/seunghyunoh/workplace/study/filter_design/ExampleMusic/'
+    infile_path = os.path.join(data_path, 'White Noise.wav')
     fs, data = wav.read(infile_path)
 
     # cuf-off freuqency case 1
@@ -839,7 +980,7 @@ def iir_filter_mulitstage_plot_parallel(file):
                    400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000,
                    5000, 6300, 8000, 10000, 12500, 16000, 20000))
 
-    # cutoff frequency case 2
+    # cut-off frequency case 2
     fB = np.array([
         2.3, 2.9, 3.6, 4.6, 5.8, 7.3, 9.3, 11.6, 14.5, 18.5, 23.0, 28.9, 36.5,
         46.3, 57.9, 72.9, 92.6, 116, 145, 185, 232, 290, 365, 463, 579, 730,
@@ -872,7 +1013,7 @@ def iir_filter_mulitstage_plot_parallel(file):
     gain_c2[1::2] = -12
 
     # set the gain
-    gain = gain_c1
+    gain = gain_c2
 
     gain_twice = np.zeros((2, len(fc)))
     gain_twice[0, :] = gain
@@ -891,7 +1032,7 @@ def iir_filter_mulitstage_plot_parallel(file):
     target_fc = fc
 
     eq_set = GraphicalEqualizer(fs, target_fc, target_gain, Q)
-    eq_set.freqz()
+    # eq_set.freqz()
 
     eq_set.write_to_file(file)
 
@@ -899,11 +1040,14 @@ def iir_filter_mulitstage_plot_parallel(file):
 def iir_filter_multistage_process_parallel(file):
     """Test wav file processing of parallel structure of iir filter 
     """
-    data_path = '/Users/seunghyunoh/workplace/study/FilterDesign/ExampleMusic/'
-    result_path = '/Users/seunghyunoh/workplace/study/filterdesign/resultmusic/'
+    data_path = '/Users/seunghyunoh/workplace/study/filter_design/ExampleMusic/'
+    result_path = '/Users/seunghyunoh/workplace/study/filter_design/resultmusic/'
 
-    infile_path = os.path.join(data_path, 'White Noise.wav')
-    fs, data = wav.read(infile_path)
+    src_wav = 'White Noise.wav'
+    infile_path = os.path.join(data_path, src_wav)
+
+    PRINTER.info(f'source file {infile_path} is processing......')
+
     wave_processor = WaveProcessor(wavfile_path=infile_path)
     wave_processor.graphical_equalizer = True
 
@@ -912,15 +1056,15 @@ def iir_filter_multistage_process_parallel(file):
     coeff_text = [text.split(' ') for text in coeff_text]
     char2num(coeff_text)
 
-    coeff_text, bias = np.array(coeff_text[:-1],
-                                dtype=np.float64), np.array(coeff_text[-1])
-    coeff = [coeff_text, bias]
+    coeff_text, bias = np.array(coeff_text[:-1]), np.array(coeff_text[-1])
 
-    wave_processor.filters = coeff
+    wave_processor.filters = coeff_text
+    wave_processor.bias = bias
 
-    outresult_path = result_path + '/whitenoise' + file.split('.')[-2].split(
+    outresult_path = result_path + '/whitenoise_' + file.split('.')[-2].split(
         '/')[-1] + '.wav'
-    print(f'file {outresult_path} is processing......')
+    
+    PRINTER.info(f'target file {outresult_path} is processing......')
 
     wave_processor.run(savefile_path=outresult_path)
 
@@ -955,12 +1099,12 @@ def plot_audacity_freq_response():
         ["10", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"])
 
     plt.show()
+    # plt.savefig("/Users/seunghyunoh/workplace/study/filter_design/result/freq_response_non_bias.png")
 
 
 if __name__ == '__main__':
-    logger = maker_logger()
-    logger.info("Hello Digital Signal Processing World!")
-
+    PRINTER.info("Hello Digital Signal Processing World!")
+    
     fc_band = np.array([250, 2000, 8000])
     """ Several types of filters and
         Analysis analog and digital scope of pole and zeros """
@@ -968,7 +1112,7 @@ if __name__ == '__main__':
     # plot_sheving_filter_digital()
     # plot_sheving_filter_analog()
     """Cascade of filters coffcient design"""
-    iir_filter_mulitstage_plot_cascade(fc_band)
+    # iir_filter_mulitstage_plot_cascade(fc_band)
     # iir_filter_mulitstage_process_cascade(fc_band)
     """ fi command example """
     # fi_example()
@@ -979,14 +1123,18 @@ if __name__ == '__main__':
     """ Non-linear, linear interpolation test """
     # example_2ndinterpolation()
     """ Hilbert Transform test """
-    # test_hilber_from_scratch_time_domain()
-    # test_hilber_from_scratch_frequency_response()
+    # test_hilbert_from_scratch_time_domain()
+    # test_hilbert_from_scratch_frequency_response()
+    # example_hilbert_signal()
+    # example_hilbert_transform()
     """ Matrix Transform test"""
     # test_even_odd_cross_matrix_1d()
     # test_even_odd_cross_matrix_2d()
     """Parallel of filters coffcient design"""
     file = os.path.join(ROOT, 'lib/data/coeff_test.txt')
-    # iir_filter_mulitstage_plot_parallel(file)
-    # iir_filter_multistage_process_parallel(file)
+    iir_filter_mulitstage_plot_parallel(file)
+    iir_filter_multistage_process_parallel(file)
+    
     """ Audacity Frequency Response"""
     # plot_audacity_freq_response()
+

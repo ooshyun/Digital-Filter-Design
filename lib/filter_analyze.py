@@ -21,9 +21,17 @@ import matplotlib.pyplot as plt
 
 if __name__.split('.')[0] == 'lib':
     from lib.util import plot_freqresp
+    from lib.config import *
 else:
     from util import plot_freqresp
+    from config import *
 
+if DEBUG:
+    if __name__.split('.')[0] == 'lib':
+        from lib.debug.log import maker_logger
+    else:
+        from debug.log import maker_logger
+    logger = maker_logger()
 
 class FilterAnalyzePlot(object):
     """Analyze filters using plot

@@ -9,10 +9,10 @@ debug_path = f"{os.getcwd()}/lib/debug/"
 
 with open(f"{debug_path}logging.json", "rt") as file:
     config = json.load(file)
+# LOG_FORMAT = "[%(asctime)-10s] (line %(lineno)d) %(name)s:%(levelname)s - %(message)s"
+LOG_FORMAT = "[%(filename)s, line %(lineno)d) %(name)s:%(levelname)s - %(message)s"
 
-LOG_FORMAT = "[%(asctime)-10s] (line %(lineno)d) %(name)s:%(levelname)s - %(message)s"
 logging.config.dictConfig(config)
-
 
 def maker_logger(name=None):
     #1 logger instance
@@ -42,10 +42,11 @@ def maker_logger(name=None):
 
     return logger
 
+PRINTER = maker_logger()
 
 if __name__ == "__main__":
-    _logger = maker_logger()
+    # _logger = maker_logger()
 
-    _logger.debug("test")
-    _logger.info("test")
-    _logger.warning("test")
+    PRINTER.debug("test")
+    PRINTER.info("test")
+    PRINTER.warning("test")

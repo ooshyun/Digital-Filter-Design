@@ -10,7 +10,9 @@
             - How to apply real component and bias ?
             - issue
                 0. Matrix M is not include imaginary, the paper said it is.
-                1. If applying bias, then under 10 Hz frequency is amplified 10 dB -> [Trial] adjust the target bias gain to 0
+                1. If applying bias, then under 10 Hz frequency is amplified 10 dB 
+                    -> [Trial] adjust the target bias gain to 0
+                    -> [Solution] use memory of previous frame's delay
                 2. Big peak and big drop make the filter unstable in gain case 1
         [ ] 2. Floating point -> 2.30
         [ ] 3. Double pole position verification -> result is bad
@@ -25,18 +27,26 @@
 """
 import time
 import numpy as np
-from scipy.signal import lfilter
+from scipy.signal import lfilter, hilbert
+
 import scipy.io.wavfile as wav
+
+from lib.graphic_equalizer import EPS
 # import matplotlib.pyplot as plt
 # from numpy.polynomial.polynomial import polyval as npp_polyval
 
 if __name__.split('.')[0] == 'lib':
     from lib.realtimedsp import wave_file_process, packet
+    from lib.config import *
 else:
     from realtimedsp import wave_file_process, packet
-
-COUNT = 1
-
+    from config import *
+    
+if DEBUG:
+    if __name__.split('.')[0] == 'lib':
+        from lib.debug.log import PRINTER
+    else:
+        from debug.log import PRINTER
 
 class WaveProcessor(object):
     """Process wave file using filters
@@ -53,9 +63,10 @@ class WaveProcessor(object):
         else:
             raise ValueError("wavfile_path must be str or np.ndarray")
 
+        self._bias = None
         self._filters = []
         self._freqfilters = []
-        self.zi = None
+        self.zi = np.zeros(shape=(31, 2))
 
         self.timefilter_time = []
         self.freqfilter_time = []
@@ -74,7 +85,15 @@ class WaveProcessor(object):
 
     @filters.setter
     def filters(self, coeff):
-        self._filters.append(np.array(coeff))
+        self._filters.append(np.array(coeff, dtype=np.float64))
+
+    @property
+    def bias(self) -> np.ndarray:
+        return self._bias
+    
+    @bias.setter
+    def bias(self, coeff):
+        self._bias = np.array(coeff, dtype=np.float64)
 
     @property
     def freqfilters(self) -> list:
@@ -84,32 +103,37 @@ class WaveProcessor(object):
     def freqfilters(self, index):
         self._freqfilters.append(np.array(index).flatten())
 
-    def process_time_domain(self, inpacket, queue, parameter):
+    def process_time_domain(self, inpacket : packet, queue, parameter):
         curr_time = time.perf_counter()
         if len(self._filters) == 0:
             return inpacket
         else:
-            _, indata = inpacket.__get__()
+            in_timecount, indata = inpacket.__get__()
             outdata = indata.copy()
             if self.graphical_equalizer:
-                result = np.zeros_like(outdata)
-                coeff = self._filters[0][0]
-                bias = self._filters[0][1]
-                self.zi = np.zeros(shape=(coeff.shape[0], 2))
+                result = np.zeros_like(outdata, dtype=np.float)
 
+                coeff = self._filters[0]
                 coeff = coeff.reshape(coeff.shape[0], 2, coeff.shape[1] // 2)
+                bias = self._bias
+
+                self.zi = self.zi.astype(bias.dtype)
+
                 for i, sample in enumerate(outdata):
                     ptr_zi, ptr_a, ptr_b, b, a = 0, 0, 0, 0, 1
+                    
+                    sample = sample.astype(bias.dtype)
 
+                    # print(ptr_zi, ptr_a, ptr_b)
                     # first coefficient
                     y = self.zi[:, ptr_zi] + coeff[:, b, ptr_b] * sample
-                    # result[i] = np.sum(y) + bias
-                    result[i] = np.sum(y)
+                    # print(self.zi[:, ptr_zi], coeff[:, b, ptr_b],  sample)
                     ptr_a += 1
                     ptr_b += 1
 
+                    # print(ptr_zi, ptr_a, ptr_b)
                     # middle coefficient
-                    for i in range(self.zi.shape[-1] - 2):
+                    for _ in range(0, self.zi.shape[-1] - 2 + 1):
                         self.zi[:, ptr_zi] = sample * coeff[:, b, ptr_b] \
                                             - y * coeff[:, a, ptr_a] \
                                             + self.zi[:, ptr_zi+1]
@@ -117,17 +141,19 @@ class WaveProcessor(object):
                         ptr_b += 1
                         ptr_zi += 1
 
+                    # print(ptr_zi, ptr_a, ptr_b)
                     # last coefficient
                     self.zi[:,
                             ptr_zi] = sample * coeff[:, b, ptr_b] \
                                     - y * coeff[:, a, ptr_a]
+                    # update to result
+                    result[i] = np.sum(y) + bias*sample
 
                 assert len(outdata) == len(result)
                 outdata = result
 
-                # # global COUNT
-                # if COUNT ==1:
-                #     raise ValueError
+                if DEBUG:
+                    raise ValueError
             else:
                 for f in self._filters:
                     b, a = f
@@ -135,7 +161,7 @@ class WaveProcessor(object):
 
             self.timefilter_time.append(time.perf_counter() - curr_time)
             outpacket = packet()
-            outpacket.timecounter = 0
+            outpacket.timecounter = in_timecount
             outpacket.data = outdata
             return outpacket
 
