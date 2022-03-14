@@ -1,8 +1,11 @@
-.idea
-.vscode
-ExampleMusic
-resultmusic
-venv_filter_design
-clone
-result
+**
+
+lib/
+study/
+.style.yapf
+LICENSE
+*.py
+pylintrc
+*.md
+*.txt
 
