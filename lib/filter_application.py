@@ -68,7 +68,7 @@ class WaveProcessor(object):
         self._bias = None
         self._filters = []
         self._freqfilters = []
-        self.zi = np.zeros(shape=(31, 2))
+        self.zi = []
 
         self.timefilter_time = []
         self.freqfilter_time = []
@@ -88,6 +88,7 @@ class WaveProcessor(object):
     @filters.setter
     def filters(self, coeff):
         self._filters.append(np.array(coeff, dtype=np.float64))
+        self.zi.append(np.zeros(shape=(coeff.shape[0], coeff.shape[-1]//2-1), dtype=np.float64))
 
     @property
     def bias(self) -> np.ndarray:
@@ -118,32 +119,32 @@ class WaveProcessor(object):
 
                 coeff = self._filters[0]
                 coeff = coeff.reshape(coeff.shape[0], 2, coeff.shape[1] // 2)
+                zi = self.zi[0]
                 bias = self._bias
 
-                self.zi = self.zi.astype(bias.dtype)
 
                 for i, sample in enumerate(outdata):
                     ptr_zi, ptr_a, ptr_b, b, a = 0, 0, 0, 0, 1
                     sample = sample.astype(bias.dtype)
 
                     # first coefficient
-                    y = self.zi[:, ptr_zi] + coeff[:, b, ptr_b] * sample
+                    y = zi[:, ptr_zi] + coeff[:, b, ptr_b] * sample
                     ptr_a += 1
                     ptr_b += 1
 
                     # middle coefficient
-                    for _ in range(0, self.zi.shape[-1] - 2 + 1):
-                        self.zi[:, ptr_zi] = (
+                    for _ in range(0, zi.shape[-1] - 2 + 1):
+                        zi[:, ptr_zi] = (
                             sample * coeff[:, b, ptr_b]
                             - y * coeff[:, a, ptr_a]
-                            + self.zi[:, ptr_zi + 1]
+                            + zi[:, ptr_zi + 1]
                         )
                         ptr_a += 1
                         ptr_b += 1
                         ptr_zi += 1
 
                     # last coefficient
-                    self.zi[:, ptr_zi] = (
+                    zi[:, ptr_zi] = (
                         sample * coeff[:, b, ptr_b] - y * coeff[:, a, ptr_a]
                     )
                     # update to result

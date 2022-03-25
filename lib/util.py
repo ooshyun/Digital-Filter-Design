@@ -15,6 +15,7 @@ from matplotlib import rcParams
 
 # edit
 import librosa
+import os
 import scipy.io.wavfile as wav
 from scipy.fftpack import *
 
@@ -854,7 +855,6 @@ def char2num(array: list):
             else:
                 raise ValueError('Wrong type')
 
-
 def plot_freqresp(ax: plt.axes,
                   x,
                   y,
@@ -879,6 +879,22 @@ def plot_freqresp(ax: plt.axes,
     ax.set_xlabel(xtitle)
     ax.set_ylabel(ytitle)
 
+def plot_audacity_freq_response():
+    root = os.getcwd()
+    origin = os.path.join(root, "result/audacity/White Noise.txt")
+    process = os.path.join(root, "result/audacity/whitenoise_coeff_test_5_audacity.txt")
+    files = [origin, process]
+
+    graphs = []
+    for idx, file in enumerate(files):
+        f = open(file, "r").read().split("\n")[1:-1]
+        graph = []
+        for i in range(len(f)):
+            freq, amp = f[i].split("\t")
+            graph.append(np.array([float(freq), float(amp)]))
+        graph = np.array(graph).T
+        graphs.append(graph)
+    return graphs[1][0], graphs[1][1] - graphs[0][1]
 
 class PlotProfile(object):
 
@@ -909,3 +925,6 @@ class PlotProfile(object):
 
     def get(self):
         return [self.__getattribute__(var_name) for var_name in self.variables]
+
+def pcm2wav(self):
+    raise NotImplementedError

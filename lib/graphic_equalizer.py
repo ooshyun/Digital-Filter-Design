@@ -1,15 +1,22 @@
 """Parallel Graphical Equalizer
 
     This is for parallel structure of filters.
-    The details of testing is on test.py.
+    The details of test is on test.py.
 
     The conversion function time to compute under the python is below,
-        <function escape_zero_difference at 0x7fa588936550> 0.185 ms
-        <function genTargetResponse at 0x7fa590f2e5e0> 126.412 ms
-        <function genPolePosition at 0x7fa590f2e700> 0.102 ms
-        <function genZeroPosition at 0x7fa590f2e820> 7.415 ms
-        <function WaveProcessor.process_time_domain at 0x7fa590f2e280> 8.445 ms
+        
+        <function escape_zero_difference at 0x7fa26a39b550> 0.111 ms
+        <function WaveProcessor.process_time_domain at 0x7fa26a39b1f0> 8.209 ms
 
+        32 band:
+        <function genTargetResponse at 0x7fa26a39b700> 27.434 ms
+        <function genPolePosition at 0x7fa26a39b820> 0.125 ms
+        <function genZeroPosition at 0x7fa26a39b940> 9.757 ms
+        
+        64 band:
+        <function genTargetResponse at 0x7fdd60e5b5e0> 41.191 ms
+        <function genPolePosition at 0x7fdd60e5b700> 0.126 ms
+        <function genZeroPosition at 0x7fdd60e5b820> 32.792 ms
     ---
     TODO LIST
     [ ] genPolePosition:
@@ -27,36 +34,40 @@
         [ ] 2. How to check the M is not correct?           
             -> Make the example
         [ ] 3. z = e^(-jwn) ?
+            - Do Raw code for scratch FFT function
         [ ] 4. Normal LS design ?
-        [ ] 5. While processing 61 channel, the 10Hz frequency missed
 
     [ ] arrange the concept:
         - The difference between linear phase and minimum phase filer design
             - What is the Moore-Penrose pseudo-inverse, which is the concept for least-square solution. ?
-        - reason of pole position
-        - issue arrangement 
-            - reflection design when designing target frequency response
-            - applying the buffer in time-domain filter
-            BUG FIX: 
-            0. matrix inv
-                sol. 0 -> EPS(the smallest number)
-            1. coefficient is too big (ex. 10e5) 
-                sol. when getting the frequncy response, it didn't compute the reflection
-            2. how to treat the complex coefficient ?
-                sol. In computation, divided complex number as below,
-                    x = a + bi -> x = [a, b]
-                        And when comparing the predicted frequency response and simulating the frequency response on a modeling
-                        , it should be complex number. Because the complex modeling in a signal such as e^-jw is the same as real sample.
-                        This predicts the filter is possible to apply audio signal, real number because coefficient is real number.
-            3. little dc aliasing( < 1Hz) and overshooting (abs(sample) > 1)
-                sol. when applying filter targeting to the transfer function, bias(d0) need to be buffer the sample and summation.
-                    Adding in the time domain make error like aliasing( < 1Hz) and sample overshooting
-    [ ] measurement:
-        - calculate the filter coefficients
-        - compute time in time-domain filter
-    [ ] write_to_file:
-        [ ]- it did not worked
+        - reason of pole position ~~ genPolePosition
+        - python. assert vs raise
+        - arrangement to notion
+            j effect to fft: 왜 fft에서 e^{-jtheta} 일까?
+            설명 1. 푸리에 급수에서 F(m)을 구할 때, 푸리에 급수와 푸리에 코사인 급수를 더해서 구하는 과정에서
+                기함수와 우함수를 동시에 표현하기 위해서 (-) 를 붙인다. 증명은 하단 사이트를 참조하자.
+                - Reference. 
+                    푸리에 급수    : https://ghebook.blogspot.com/2012/07/fourier-series.html
+                    푸리에 변환    : https://ghebook.blogspot.com/2012/08/fourier-transform.html
+                    이산 푸리에 변환: https://ghebook.blogspot.com/2020/09/dft-discrete-fourier-transform.html
+            설명 2. j 앞에 -가 붙은 이유는 복소수의 내적은 켤레(conjugate) 복소수를 취한 후 계산되기 때문이다.
+                - Reference. https://darkpgmr.tistory.com/171
+            
+            * [TODO] 정리해야 할 개념(9 -> 1 로 정리 할 것)
+                * Reference. https://ghebook.blogspot.com/2012/07/fourier-series.html
+                0. 이산 푸리에 변환
+                1. 푸리에 변환
+                2. 푸리에 급수
+                3. 열 방정식
+                4. 발산의 의미
+                5. 미분법의 의미
+                6. 좌표계 기반 벡터
+                7. 적분법의 의미
+                8. 벡터의 미적분학
+                9. 복소수, 사원수, 삼각함수
 
+    [ ] merge:
+        - graphical equalizer to filter_analayze
 
 """
 import numpy as np
@@ -64,12 +75,12 @@ import matplotlib.pyplot as plt
 from scipy.signal import hilbert
 from scipy.interpolate import pchip_interpolate
 
-# from scipy.fftpack import hilbert as hilbert_scipy
-
 if __name__.split(".")[0] == "lib":
     from lib.config import *
+    from lib.util import plot_audacity_freq_response
 else:
     from config import *
+    from util import plot_audacity_freq_response
 
 if DEBUG:
     if __name__.split(".")[0] == "lib":
@@ -128,24 +139,6 @@ def escape_zero_difference(array: np.ndarray):
     return result_array
 
 
-def plot_audacity_freq_response():
-    root = os.getcwd()
-    origin = os.path.join(root, "lib/data/audacity_origin.txt")
-    process = os.path.join(root, "lib/data/audacity_filtered.txt")
-    files = [origin, process]
-
-    graphs = []
-    for idx, file in enumerate(files):
-        f = open(file, "r").read().split("\n")[1:-1]
-        graph = []
-        for i in range(len(f)):
-            freq, amp = f[i].split("\t")
-            graph.append(np.array([float(freq), float(amp)]))
-        graph = np.array(graph).T
-        graphs.append(graph)
-    return graphs[1][0], graphs[1][1] - graphs[0][1]
-
-
 @check_time
 def genTargetResponse(
     origin: int,
@@ -157,16 +150,17 @@ def genTargetResponse(
     """Target frequency response
         1. Find amplitudes of the target frequency using spline interpolation
             a. find the index of the target frqeuency in linear scale
+                - set the origin for avoiding x to 0 in log10
             b. set gain in the target cut-off frequency
             c. Scale from linear to Logarithmic
-            d. Cubic Hermite and spline interpolation in Logarithmic scale
+            d. Cubic Hermite interpolation or spline interpolation in Logarithmic scale
                 - [V] pchip
                 - spline
         2. Find phase of the target frequency using Hilbert transform 
             a. resample in linear frequency
                 - index the logarithmic frequency to linear frequency, id_log2linear
             b. avoid overlapped frequency bin in interpolation
-            c. Cubic Hermite and spline interpolate in linear frequency
+            c. linear interpolation sampling in linear frequency
             d. compute logarithm
             e. minimum phase filter using Hilbert transform
                 - include the reflection 
@@ -183,53 +177,31 @@ def genTargetResponse(
     """ 1. Find amplitudes of the target frequency using spline interpolation """
     # 1-a. find the index of the target frqeuency in linear scale
     fs, fc, target_gain, num_step = sampling_freq, cutoff_freq, gains, steps
-    f_linear = np.zeros(shape=num_step * 2 - 1)
-    f_linear[:num_step] = np.linspace(
-        origin, int(fs / 2), num_step, endpoint=True
-    )  # min 1Hz, max fs/2, min >= 1 for log10
-    f_linear[num_step - 1 :] = np.linspace(int(fs / 2), fs, num_step, endpoint=True)
-    id_fs = num_step - 1
+    f_linear = np.linspace(origin, fs // 2, num_step, endpoint=True)
 
     if DEBUG_PRINT:
         print("-" * 40)
         print("Target frequency: \n", fc)
+        print("Frequency Resolution: ", (fs // 2) / num_step)
 
     # 1-b. set gain in the target cut-off frequency
     gain_fc = np.zeros(len(target_gain) + 2)
+    gain_fc[0] = target_gain[0]
     gain_fc[1:-1] = target_gain
-    gain_fc[0] = target_gain[0]  # DC
-    gain_fc[-1] = 0  # Nyquist
-
-    index_fc = ((fc - f_linear[0]) // (f_linear[1] - f_linear[0])).astype(int)
-    if not all(index_fc < num_step):
-        raise Exception("Cutoff Frequency out of range")
-    for i, id in enumerate(index_fc):
-        if not (f_linear[id] <= fc[i] <= f_linear[id + 1]):
-            raise ValueError(
-                f"index out of range {f_linear[id]} <= {fc[i]} <= {f_linear[id+1]}"
-            )
-        else:
-            pass
+    gain_fc[-1] = target_gain[-1]  # Nyquist frequency
 
     # 1-c. Scale from linear to Logarithmic
-    # set the origin for avoiding x to 0 in log10
-    f_log = np.log10(f_linear)
-    f_target_log = np.zeros(len(index_fc) + 2)
-    for i, id in enumerate(index_fc):
-        f_target_log[i + 1] = f_log[id]
-    f_target_log[0] = f_log[0]
-    f_target_log[-1] = f_log[id_fs]
-    if DEBUG_PRINT:
-        print("-" * 40)
-        print(
-            f"Average Linear -> Log Error: {np.average(abs(10**f_target_log[1:-1] - fc))} in target frequency"
-        )
+    f_target_log = np.zeros(len(fc) + 2)
+    f_target_log[0] = 0
+    f_target_log[1:-1] = np.log10(fc)
+    f_target_log[-1] = np.log10(f_linear[-1])
+    f_target_log = escape_zero_difference(f_target_log)
 
-    # 1-d. Cubic Hermite and spline interpolation in Logarithmic scale
+    # 1-d. Cubic Hermite and spline interpolation in logarithmic scale
     f_target_intep_log = np.array([])
     gain_target_log = np.array([])
-    for id in range(len(f_target_log) - 1):
-        buf_x = np.linspace(f_target_log[id], f_target_log[id + 1], num=10)
+    for fid in range(len(f_target_log) - 1):
+        buf_x = np.linspace(f_target_log[fid], f_target_log[fid + 1], num=11)
         buf_y = pchip_interpolate(f_target_log, gain_fc, buf_x)
         if len(f_target_intep_log) == 0:
             f_target_intep_log = np.append(f_target_intep_log, buf_x)
@@ -238,9 +210,8 @@ def genTargetResponse(
             f_target_intep_log = np.append(f_target_intep_log, buf_x[1:])
             gain_target_log = np.append(gain_target_log, buf_y[1:])
     del buf_x, buf_y
-    f_target_intep_log = 10 ** f_target_intep_log
 
-    assert abs(f_target_intep_log[-1] - f_linear[id_fs]) < 1e-6
+    f_target_intep_log = 10 ** f_target_intep_log
 
     if DEBUG_PRINT:
         # The number of points = N(P-1)-(P-2) ~ N=10-11 -> 10P
@@ -261,7 +232,7 @@ def genTargetResponse(
     """ 2. Find phase of the target frequency using Hilbert transform """
     # 2-a. resample in linear frequency
     id_log2linear = (
-        (f_target_intep_log - f_linear[0]) // abs((f_linear[1] - f_linear[0]))
+        (f_target_intep_log - f_linear[0]) // abs(f_linear[1] - f_linear[0])
     ).astype(int)
 
     assert any(np.diff(id_log2linear) == 0)
@@ -286,44 +257,35 @@ def genTargetResponse(
 
     f_target_linear = np.zeros_like(f_target_intep_log)
     f_target_linear = f_linear[id_log2linear]
+
+    assert (
+        f_target_linear[0] - f_linear[0] < 1e-6
+        and f_target_linear[-1] - f_linear[-1] < 1e-6
+    )
     del f_target_intep_log
 
     # 2-b. avoid overlapped frequency in interpolation, interpolation needs a increment
     f_target_linear = escape_zero_difference(f_target_linear)
-
     if DEBUG_PRINT:
         print("-" * 40)
         print(
             "Average Log- > Linear Error:  ",
-            np.average(
-                abs(f_target_linear - [f_linear[int(id)] for id in id_log2linear])
-            ),
+            f_target_linear - [f_linear[int(id)] for id in id_log2linear],
         )
 
-    # 2-c. Cubic Hermite and spline interpolate in linear frequency
-    gain_target_linear = np.array([])
-    for id in range(len(f_target_linear) - 1):
-        buf_x = np.linspace(
-            f_target_linear[id],
-            f_target_linear[id + 1],
-            num=int(id_log2linear[id + 1] - id_log2linear[id] + 1),
-        )
-        buf_y = pchip_interpolate(f_target_linear, gain_target_log, buf_x)
-        if len(gain_target_linear) == 0:
-            gain_target_linear = np.append(gain_target_linear, buf_y)
-        else:
-            gain_target_linear = np.append(gain_target_linear, buf_y[1:])
-    del buf_x, buf_y
+    # 2-c. Linear interpolation sampling in linear frequency
+    gain_target_linear = np.interp(f_linear, f_target_linear, gain_target_log)
 
-    # 2-d. compute logarithm and apply reflection, 
+    # 2-d. compute logarithm and apply reflection,
     amp_target_linear = np.zeros(
         shape=len(gain_target_linear) * 2 - 2, dtype=np.complex128
     )
     amp_target_linear[: len(gain_target_linear)] = 10 ** (gain_target_linear / 20)
-    # reflection. np.flip(amp_target_linear)
     amp_target_linear[len(gain_target_linear) :] = amp_target_linear[
         1 : len(gain_target_linear) - 1
-    ][::-1]
+    ][
+        ::-1
+    ]  # reflection. np.flip(amp_target_linear)
 
     # 2-e. minimum phase filter using hilbert transform, FFT and iFFT
     hilbert_transformer = hilbert(np.log(amp_target_linear).real).imag
@@ -360,12 +322,10 @@ def genTargetResponse(
     # reflection
     target_amp[size_target_freq:] = (target_amp[1 : size_target_freq - 1].conj())[::-1]
     target_freq[size_target_freq:] = (
-        2 * f_linear[id_fs] - target_freq[1 : size_target_freq - 1]
+        2 * f_linear[-1] - target_freq[1 : size_target_freq - 1]
     )[::-1]
 
     del id_log2linear, amp_target_linear
-
-    assert (target_freq[-1] - f_linear[-1]) < EPS, "Nyquist frequency is not same"
 
     if DEBUG_PLOT:
         _, axes = plt.subplots(nrows=2)
@@ -390,6 +350,7 @@ def genTargetResponse(
         )
         for ax in axes:
             ax.set_xlim(f_linear[0], f_linear[-1])
+            ax.set_xscale("log")
             ax.legend()
         plt.show()
 
@@ -459,11 +420,10 @@ def genZeroPosition(
                     [V] Real impulse response   , p_opt = M^+ @ h_t, M^+ = (M^T @ M)^-1 @ M^T
                     [ ] Complex impulse response, p_opt = M^+ @ h_t  M^+ = (M^H @ M)^-1 @ M^H
     """
-    fs, fn, ht = sampling_freq, target_freq, target_h
+    fs = sampling_freq
+    fn = target_freq[: len(target_freq) // 2 + 1]
+    ht = target_h[: len(target_h) // 2 + 1]
     a, wn = np.array(a_coeff), 2 * np.pi * fn / fs
-    target_freq = target_freq[: len(target_freq) // 2 + 1]
-    wn = wn[: len(wn) // 2 + 1]
-    ht = ht[: len(ht) // 2 + 1]
 
     """1. Denominator"""
     # 1-a. generate matrix z = e^(-jwn) for feedback coefficient
@@ -496,7 +456,7 @@ def genZeroPosition(
 
     """3. Computation for desired gain"""
     # 3-a. frequency weight
-    weight_wn = 1 / np.power(np.sqrt(np.sqrt(np.abs(ht))), 3)
+    weight_wn = 1 / np.abs(ht)
     M_coeff_w = np.expand_dims(weight_wn, axis=-1) * M_coeff
     ht_w = weight_wn * ht
 
@@ -525,8 +485,8 @@ def genZeroPosition(
         Hn = np.matmul(
             M_coeff, np.expand_dims(p_opt, axis=-1)
         ).squeeze()  # (289, 63) @ (63, 1) -> (289, 1)
-        error = np.sum(np.power(np.abs(Hn - ht), 2))
-        print("error: ", error)
+        error = np.abs(np.power(np.abs(Hn - ht), 2))
+        print("error: ", np.max(error))
 
         _, axes = plt.subplots(nrows=3)
         amplitude_Hn = 20 * np.log10(np.abs(Hn))
@@ -534,22 +494,18 @@ def genZeroPosition(
         angle_Hn = np.angle(Hn, deg=True)
         angle_ht = np.angle(ht, deg=True)
 
-        axes[0].scatter(target_freq, amplitude_Hn, marker=".", label="Calculated Gain")
-        axes[0].scatter(
-            target_freq, amplitude_ht, color="r", marker="*", label="Target gain"
-        )
-        axes[1].plot(target_freq, angle_Hn, label="Calculated phase")
-        axes[1].plot(target_freq, angle_ht, color="r", label="Target phase")
+        axes[0].scatter(fn, amplitude_Hn, marker=".", label="Calculated Gain")
+        axes[0].scatter(fn, amplitude_ht, color="r", marker="*", label="Target gain")
+        axes[1].plot(fn, angle_Hn, label="Calculated phase")
+        axes[1].plot(fn, angle_ht, color="r", label="Target phase")
+
         axes[2].scatter(
-            target_freq,
-            np.abs(amplitude_Hn - amplitude_ht),
-            marker=".",
-            label="Difference Gain",
+            fn, error, marker=".", label="Difference Gain",
         )
 
         for ax in axes:
             ax.set_xscale("log")
-            ax.set_xlim(target_freq[0], target_freq[-1])
+            ax.set_xlim(fn[0], fn[-1])
 
         plt.show()
     del M_coeff
@@ -583,8 +539,8 @@ class GraphicalEqualizer(object):
             self.sampling_freq, self.a, self.freq_target, self.H_target
         )
 
-    def write_to_file(self, filename):
-        with open(filename, "w") as f:
+    def write_to_file(self, save_path):
+        with open(save_path, "w") as f:
             for ch in range(len(self.b[0])):
                 # f.write(f'{ch}: ')
                 f.write(f"{self.b[0][ch]} ")
@@ -594,9 +550,10 @@ class GraphicalEqualizer(object):
                 f.write(f"{self.a[1][ch]} ")
                 f.write(f"{self.a[2][ch]}\n")
             f.write(f"{self.d}\n")
-        print(f"Written to file, {filename}")
+        print(f"Written to file, {save_path}")
 
-    def freqz(self):
+
+    def freqz(self, save_path="", full=False):
         """Apply parallel filter to data
                          -jw                  -jw              -jwM
                 -jw   Bk(e  )    bk[0] + bk[1]e    + ... + bk[M]e
@@ -625,22 +582,11 @@ class GraphicalEqualizer(object):
         d = np.ones_like(h) * d
         h += d
 
-        w_inv = np.linspace(np.pi, 2 * np.pi, num_step, endpoint=True)
-        zm = np.array(
-            [np.ones_like(w_inv), np.exp(-1j * w_inv), np.exp(-1j * 2 * w_inv)]
-        )
-        h_reflection = coeff @ zm
-        h_reflection = h_reflection.transpose(2, 0, 1)
-        h_reflection = h_reflection[:, :, 0] / h_reflection[:, :, 1]
-        h_reflection = np.sum(h_reflection, axis=-1)
-        d = np.ones_like(h_reflection) * d
-        h_reflection += d
-
         plt.scatter(
             w / (2 * np.pi) * fs,
             20 * np.log10(np.abs(h)),
             marker="*",
-            color="r",
+            color="k",
             label="simulation",
         )
 
@@ -648,26 +594,75 @@ class GraphicalEqualizer(object):
             fc_target[: len(fc_target) // 2 + 1],
             gain_target[: len(fc_target) // 2 + 1],
             marker="o",
-            color="k",
+            color="r",
             label="target",
         )
 
-        plt.scatter(
-            w / (2 * np.pi) * fs,
-            20 * np.log10(np.abs(np.flip(h_reflection))),
-            marker=".",
-            color="b",
-            label="simulation_inverse",
-        )
+        if full:
+            w_inv = np.linspace(np.pi, 2 * np.pi, num_step, endpoint=True)
+            zm = np.array(
+                [np.ones_like(w_inv), np.exp(-1j * w_inv), np.exp(-1j * 2 * w_inv)]
+            )
+            h_reflection = coeff @ zm
+            h_reflection = h_reflection.transpose(2, 0, 1)
+            h_reflection = h_reflection[:, :, 0] / h_reflection[:, :, 1]
+            h_reflection = np.sum(h_reflection, axis=-1)
+            d = np.ones_like(h_reflection) * d
+            h_reflection += d
 
-        # x, y = plot_audacity_freq_response()
-        # plt.scatter(x, y, marker='.', color='g', label='after processing')
+            plt.scatter(
+                w / (2 * np.pi) * fs,
+                20 * np.log10(np.abs(np.flip(h_reflection))),
+                marker=".",
+                color="b",
+                label="simulation_inverse",
+            )
 
         plt.xlim(1,)
         plt.xscale("log")
         plt.grid()
         plt.legend()
-        plt.show()
+
+        if len(save_path)==0:
+            plt.show()
+        else:
+            plt.savefig(save_path)
+            plt.show()
+
+
+    def freqz_comp_audacity(self, save_path=""):
+        x, y = plot_audacity_freq_response()
+        plt.scatter(x, y, marker='.', color='dimgrey', label='after processing')
+
+        plt.scatter(
+            self.cufoff_freq,
+            self.gain,
+            marker="o",
+            color="orangered",
+            label="target"
+        )
+
+        _fontsize = 'large'
+        plt.xlim(20,)
+        plt.xscale("log")
+        plt.xticks([20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
+                ["20", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"],
+                fontsize=_fontsize)
+        plt.yticks(np.arange(-20, 40, 10) if min(self.gain) < 0 else np.arange(0, 40, 10),
+                fontsize=_fontsize)
+        plt.grid()
+        plt.legend(fontsize="large")
+        plt.xlabel("Frequency (Hz)",
+                fontsize=_fontsize)
+        plt.ylabel("Gain (dB)",
+                fontsize=_fontsize)
+
+        if len(save_path)==0:
+            plt.show()
+        else:
+            plt.savefig(save_path)
+            plt.show()
+
 
     def plot_debug(self):
         if len(self.axes) == 0:
@@ -844,8 +839,19 @@ if "__main__" == __name__:
     gain_c3 = np.zeros_like(gain_c2)
     gain_c3[np.where(fc == 2000)] = 12
 
+    # gain case 4
+    gain_c4 = np.ones_like(gain_c2) * 12
+
+    # gain case 5
+    gain_c5 = np.zeros_like(fc)
+    gain_c5[0::3] = 0
+    gain_c5[1::3] = 0
+    gain_c5[2::3] = 12
+
     # set the gain
-    gain = gain_c1
+    gains = [gain_c1, gain_c2, gain_c3, gain_c4, gain_c5]
+    # for id_gain, gain in enumerate(gains):
+    gain = gain_c5
 
     gain_twice = np.zeros((2, len(fc)))
     gain_twice[0, :] = gain
@@ -853,23 +859,17 @@ if "__main__" == __name__:
     gain_twice = gain_twice.reshape(
         (gain_twice.shape[0] * gain_twice.shape[1],), order="F"
     )
-    fc_twice = fc_twice[1:]
-    gain_twice = gain_twice[1:]
+    gain_twice[1:] = gain_twice[:-1]
+    gain_twice[0] = 0
 
     # set the Q, not implemented yet
     Q = np.ones_like(fc)
 
-    # fc = fc_twice
-    # gain = gain_twice
-
     eq = GraphicalEqualizer(fs, fc, gain, Q)
     eq.freqz()
+    # eq.freqz_comp_audacity()
 
-    file = "/lib/data/test_graphic_eq_g1.txt"
-    eq.write_to_file(f"{root}/{file}")
+    # file = "/lib/data/test_graphic_equalizer.txt"
+    # eq.write_to_file(f"{root}/{file}")
 
-    print_func_time()
-
-    # file = '/lib/data/test_graphic_eq_ftwice_g1.txt'
-    # eq = GraphicalEqualizer(fs, fc_twice, gain_twice, Q)
-    # eq.write_to_file('f'{root}/{file}')
+    # print_func_time()

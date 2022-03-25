@@ -2,7 +2,7 @@
 
     This is for plotting the frequency response of the filter.
     It provides the parallel and cascades structure. The details of testing is on
-    test.py.
+    main.py.
     ---
     TODO LIST
     - FilterAnalyzerPlot.plot

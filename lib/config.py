@@ -1,5 +1,5 @@
 from numpy import finfo
-EPS = finfo(float).eps
+EPS = 10e-10
 DEBUG_PRINT = False
 DEBUG_PLOT = False
 DEBUG = True
