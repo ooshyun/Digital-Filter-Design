@@ -38,33 +38,12 @@
         [ ] 4. Normal LS design ?
 
     [ ] arrange the concept:
+        - Why the windowing is applying two times which are in the time domain and after the ifft?
         - The difference between linear phase and minimum phase filer design
-            - What is the Moore-Penrose pseudo-inverse, which is the concept for least-square solution. ?
-        - reason of pole position ~~ genPolePosition
-        - python. assert vs raise
-        - arrangement to notion
-            j effect to fft: 왜 fft에서 e^{-jtheta} 일까?
-            설명 1. 푸리에 급수에서 F(m)을 구할 때, 푸리에 급수와 푸리에 코사인 급수를 더해서 구하는 과정에서
-                기함수와 우함수를 동시에 표현하기 위해서 (-) 를 붙인다. 증명은 하단 사이트를 참조하자.
-                - Reference. 
-                    푸리에 급수    : https://ghebook.blogspot.com/2012/07/fourier-series.html
-                    푸리에 변환    : https://ghebook.blogspot.com/2012/08/fourier-transform.html
-                    이산 푸리에 변환: https://ghebook.blogspot.com/2020/09/dft-discrete-fourier-transform.html
-            설명 2. j 앞에 -가 붙은 이유는 복소수의 내적은 켤레(conjugate) 복소수를 취한 후 계산되기 때문이다.
-                - Reference. https://darkpgmr.tistory.com/171
-            
-            * [TODO] 정리해야 할 개념(9 -> 1 로 정리 할 것)
-                * Reference. https://ghebook.blogspot.com/2012/07/fourier-series.html
-                0. 이산 푸리에 변환
-                1. 푸리에 변환
-                2. 푸리에 급수
-                3. 열 방정식
-                4. 발산의 의미
-                5. 미분법의 의미
-                6. 좌표계 기반 벡터
-                7. 적분법의 의미
-                8. 벡터의 미적분학
-                9. 복소수, 사원수, 삼각함수
+            - What is the Moore-Penrose pseudo-inverse, which is the concept for least-square solution?
+        - [TODO]reason of pole position ~~ genPolePosition   
+            - Fixed pole design         
+                - Reference. http://home.mit.bme.hu/~bank/parfilt/
 
     [ ] merge:
         - graphical equalizer to filter_analayze
@@ -362,7 +341,7 @@ def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
     """Generate pole position from cutoff frequency
         theta = 2*pi*fk/fs, for k= 1, 2, ..., N
         pole = e^{delta_theta_k/2}*e^{+-j*theta_k}
-        
+        * e^{delta_theta_k/2} means poles set at -3dB points
         delta_theta_1 = theta_2 - theta_1,
         delta_theta_k = (theta_k+1 - theta_k-1)/2,
         delta_theta_N = theta_N - theta_N-1
