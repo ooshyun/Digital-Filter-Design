@@ -1,33 +1,31 @@
-- TODO:
+# Digital Filter design and analysis with Python
+
+
+## Features
+1. Filter type
+
+2. Q factor
+
+3. Bandwidth
+
+4. Gain
+
+5. Phase
+
+6. Equalizer
+  - Parametric EQ
+  - Graphical EQ
+
+## TODO
 1. pitch detection algorithm
     - librosa.pyin
     - pysptk
     pysptk 나 pyin 과 같은 pitch detection algorithm을 사용하여 프레임별로 f0 를 추출하고, 원하시는 기준에 맞추어 일정 수준 이상의 값을 고르시는 방법
+2. Equalizer
+  - Semi-Parametric EQ
+  - Dynamic EQ
 
-**Filter type**
-
-**Q factor**
-
-**Bandwidth**
-
-**Gain**
-
-**Phase**
-
-**Equalizer**
-
-1. Parametric EQ
-
-2. Semi-Parametric EQ
-
-3. Dynamic EQ
-
-4. Graphic EQ
-
-5. Shelving EQ
-
----
-# Tree
+## Tree
 FilterDesign
     - lib
         - biquad_cookbook.py
@@ -41,7 +39,7 @@ FilterDesign
         - wav_generator.py
         - zplane.py
         - c
-            - [_filt.c]
+            - _filt.c
         - data
             - audacity_filtered.txt
             - audacity_origin.txt
