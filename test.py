@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from lib.fi import fi
 from lib.util import hilbert_from_scratch
 
+
 def example_fi():
     """Test fi command
     """
@@ -426,7 +427,62 @@ def test_even_odd_cross_matrix_2d():
     print(z[0])
 
 
-if __name__=='__main__':
+def paper_all_pass_filter():
+    """paper. frequency-warped signal preprocessing for audio application
+        - 7p. 2.1 Allpass filter chain
+    """
+    import scipy.signal as signal
+    sampling_rate = 44100
+    dt = 1 / sampling_rate
+    w = np.linspace(0, np.pi, sampling_rate // 2, endpoint=True)
+    f = np.linspace(0, sampling_rate // 2, sampling_rate // 2, endpoint=True)
+    z = np.exp(-1j * w)  # z^-1
+    _lambda = 0
+
+    fig = plt.figure(figsize=(8, 6))
+
+    axes = [0] * 3
+    axes[0] = fig.add_subplot(2, 2, 3)
+    axes[1] = fig.add_subplot(2, 2, 4)
+    axes[2] = fig.add_subplot(2, 1, 1)
+
+    for _lambda in [0, 0.5, 0.723, 0.9]:
+        b = [-_lambda, 1]
+        a = [1, -_lambda]
+        D_z = (-_lambda + z) / (1 - _lambda * z)
+
+        # phase
+        phi = np.angle(D_z) / (2 * np.pi)
+        # phase normalize
+        phi /= phi[np.where(np.abs(phi) == np.max(np.abs(phi)))[0][0]]
+        axes[0].plot(f, phi, ".", label=f"lambda={_lambda}")
+        # group delay
+        w, gd = signal.group_delay((b, a), w=sampling_rate // 2)
+        axes[1].plot(f, gd, "*", label=f"lambda={_lambda}")
+
+        # amplitude
+        amplitude = np.abs(D_z)
+        axes[2].plot(f, amplitude, ".", label=f"lambda={_lambda}")
+
+    axes[0].set_ylim(0, 1)
+    axes[0].set_xlim(0, sampling_rate // 2)
+    axes[0].legend()
+    axes[0].grid(True)
+
+    axes[1].set_ylim(0, 7)
+    axes[1].set_xlim(0, sampling_rate // 2)
+    axes[1].legend()
+    axes[1].grid(True)
+
+    axes[2].set_yticks(np.arange(0, 2.5, 0.5))
+    axes[2].set_xlim(0, sampling_rate // 2)
+    axes[2].legend()
+    axes[2].grid(True)
+
+    # plt.xscale("log")
+    plt.show()
+
+if __name__ == "__main__":
     """ fi command example """
     # example_fi()
     """ Non-linear, linear interpolation test """
@@ -439,3 +495,7 @@ if __name__=='__main__':
     """ Matrix Transform test"""
     # test_even_odd_cross_matrix_1d()
     # test_even_odd_cross_matrix_2d()
+
+    """ frequency wrapping"""
+    # -ing
+    paper_all_pass_filter()

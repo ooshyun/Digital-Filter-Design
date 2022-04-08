@@ -44,6 +44,10 @@
         - [TODO]reason of pole position ~~ genPolePosition   
             - Fixed pole design         
                 - Reference. http://home.mit.bme.hu/~bank/parfilt/
+                - Reading papers
+                    - [Main     ] High Precision parallel Graphical Equalizer Design
+                    - [Reference][-ING] fixed-pole design, 2007
+                    - [Reference][-ING] freqeuency warped signal processing, 2000
 
     [ ] merge:
         - graphical equalizer to filter_analayze
