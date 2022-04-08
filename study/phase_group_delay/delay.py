@@ -18,6 +18,7 @@ def swanal(t, f, fs, amp, phase, B, A):
         len_a = 1
     else:
         len_a = len(A)
+    
     len_delay = max(len_b, len_a)
 
     ampin = amp
@@ -40,11 +41,17 @@ def swanal(t, f, fs, amp, phase, B, A):
 
 def real_sine_wave_analysis(flag_plot=False):
     """Real Sine-wave anaylsis
-        Reference. https://ccrma.stanford.edu/~jos/fp/Sine_Wave_Analysis.html
         1. Use Equation
-
         2. Use filter cofficient b, a
+        
+        TODO:
+            1. Phase Difference
+                phaseDiff =  acos(min(1,max(-1,yss(end)/ampOut)))
+                        - acos(min(1,max(-1,sss(end)/ampIn)));
+
+        Reference. https://ccrma.stanford.edu/~jos/fp/Sine_Wave_Analysis.html
     """
+    
     # 1. Using equation f(y) = g(x)
     sampling_rate = 44100
     dt = 1 / sampling_rate
@@ -142,11 +149,7 @@ def real_sine_wave_analysis(flag_plot=False):
 
         gains = ampout / ampin
 
-        """TODO: 
-            Phase Difference
-            phaseDiff =  acos(min(1,max(-1,yss(end)/ampOut)))
-                    - acos(min(1,max(-1,sss(end)/ampIn)));
-        """
+        # TODO: Phase Difference
         sss = y_in[:, ntransient:]
 
         G_f = 2 * np.cos(np.pi * f / fs)
@@ -174,18 +177,21 @@ def real_sine_wave_analysis(flag_plot=False):
 
 def complex_sine_wave_anaylsis(flag_plot=False):
     """Complex Sinusoid wave anaylsis
-    fs: sampling rate
-    H(e^{jwT}) = 1+e^{-jwT}
-               = 2cos(wT/2)e^{-jwT/2}
-    G(w) = 2 cos(wT/2)
-    Phi(w) = -wT/2 = -pi * fn/fs
-    
-    function [gains, phases] = swanalc(t,f,B,A)
-    SWANALC - Perform COMPLEX sine-wave analysis on the 
-            digital filter having transfer function 
-            H(z) = B(z)/A(z)
+        fn: cut-off frequency
+        fs: sampling rate
+        
+        H(e^{jwT}) = 1+e^{-jwT}
+                = 2cos(wT/2)e^{-jwT/2}
+        G(w) = 2 cos(wT/2)
+        Phi(w) = -wT/2 = -pi * fn/fs
+        
+        function [gains, phases] = swanalc(t,f,B,A)
+        
+        SWANALC - Perform COMPLEX sine-wave analysis on the 
+                digital filter having transfer function 
+                H(z) = B(z)/A(z)
 
-    Reference. https://ccrma.stanford.edu/~jos/fp/Complex_Sine_Wave_Analysis.html
+        Reference. https://ccrma.stanford.edu/~jos/fp/Complex_Sine_Wave_Analysis.html
     """
     B = [1, 1]  # filter feedforward coefficients y[n] = x[n] + x[n-1]
     A = [1]  # filter feedback coefficients (none)
