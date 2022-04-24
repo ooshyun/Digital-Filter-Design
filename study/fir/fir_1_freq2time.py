@@ -5,9 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-from slib.python.debug.log import maker_logger
-_logger = maker_logger()
-
 samplingFreq = 32
 
 bandwidth = 8
@@ -118,8 +115,22 @@ if __name__ == "__main__":
     hsin = dftinv(Hsin)
 
     # Comparision between Method1. Square and Method2. Sine
-    plt.plot(hk, 'b.')
-    plt.plot(hsin, 'r*')
+    figure = plt.figure(figsize=(10, 10))
+    ax = [0]*2
+    
+    ax[0] = figure.add_subplot(211)
+    ax[1] = figure.add_subplot(212)
+    
+    ax[0].plot(hk, 'b.')
+    ax[0].plot(hsin, 'r*')
+    ax[0].grid(True)
+    ax[0].set_title("Time domain")
+
+    ax[1].plot(Hm1, 'b.')
+    ax[1].plot(Hsin, 'r*')
+    ax[1].grid(True)
+    ax[1].set_title("Frequency response")
+
     plt.show()
 
 

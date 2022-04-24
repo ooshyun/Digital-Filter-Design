@@ -8,6 +8,9 @@ import scipy.signal
 
 
 def fir(frame, nTap):
+    """
+        2 Tap: y[n] = (x[n] + x[n-1])/2
+    """
     output = [0] * len(frame)
     if isinstance(frame, np.ndarray):
         for index, value in enumerate(frame):
