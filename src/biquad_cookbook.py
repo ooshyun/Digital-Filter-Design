@@ -96,9 +96,10 @@ def _transform(b, a, Wn, analog, output):
     Wn = np.asarray(Wn)
     if not analog:
         if np.any(Wn < 0) or np.any(Wn > 1):
-            raise ValueError("Digital filter critical frequencies "
-                             "must be 0 <= Wn <= 1")
-        fs = 2.
+            raise ValueError(
+                "Digital filter critical frequencies " "must be 0 <= Wn <= 1"
+            )
+        fs = 2.0
         warped = 2 * fs * tan(pi * Wn / fs)
     else:
         warped = Wn
@@ -110,17 +111,17 @@ def _transform(b, a, Wn, analog, output):
         b, a = bilinear(b, a, fs=fs)
 
     # Transform to proper out type (pole-zero, numer-denom, state-space)
-    if output in ('zpk', 'zp'):
+    if output in ("zpk", "zp"):
         return tf2zpk(b, a)
-    elif output in ('ba', 'tf'):
+    elif output in ("ba", "tf"):
         return b, a
-    elif output in ('ss', 'abcd'):
+    elif output in ("ss", "abcd"):
         return tf2ss(b, a)
     else:
-        raise ValueError('Unknown output type {0}'.format(output))
+        raise ValueError("Unknown output type {0}".format(output))
 
 
-def lowpass(Wn, Q=1 / sqrt(2), analog=False, output='ba'):
+def lowpass(Wn, Q=1 / sqrt(2), analog=False, output="ba"):
     """
     Design an analog or digital biquad lowpass filter with variable Q.
 
@@ -168,7 +169,7 @@ def lowpass(Wn, Q=1 / sqrt(2), analog=False, output='ba'):
     return _transform(b, a, Wn, analog, output)
 
 
-def highpass(Wn, Q=1 / sqrt(2), analog=False, output='ba'):
+def highpass(Wn, Q=1 / sqrt(2), analog=False, output="ba"):
     """
     Design an analog or digital biquad highpass filter with variable Q.
 
@@ -216,7 +217,7 @@ def highpass(Wn, Q=1 / sqrt(2), analog=False, output='ba'):
     return _transform(b, a, Wn, analog, output)
 
 
-def bandpass(Wn, Q=1, type='skirt', analog=False, output='ba'):
+def bandpass(Wn, Q=1, type="skirt", analog=False, output="ba"):
     """
     Design an analog or digital biquad bandpass filter with variable Q.
 
@@ -262,10 +263,10 @@ def bandpass(Wn, Q=1, type='skirt', analog=False, output='ba'):
         function.  Only returned if ``output='zpk'``.
 
     """
-    if type in (1, 'skirt'):
+    if type in (1, "skirt"):
         # H(s) = s     / (s**2 + s/Q + 1)
         b = np.array([0, 1, 0])
-    elif type in (2, 'peak'):
+    elif type in (2, "peak"):
         # H(s) = (s/Q) / (s**2 + s/Q + 1)
         b = np.array([0, 1 / Q, 0])
     else:
@@ -276,7 +277,7 @@ def bandpass(Wn, Q=1, type='skirt', analog=False, output='ba'):
     return _transform(b, a, Wn, analog, output)
 
 
-def notch(Wn, Q=10, analog=False, output='ba'):
+def notch(Wn, Q=10, analog=False, output="ba"):
     """
     Design an analog or digital biquad notch filter with variable Q.
 
@@ -322,7 +323,7 @@ def notch(Wn, Q=10, analog=False, output='ba'):
     return _transform(b, a, Wn, analog, output)
 
 
-def allpass(Wn, Q=1, analog=False, output='ba'):
+def allpass(Wn, Q=1, analog=False, output="ba"):
     """
     Design an analog or digital biquad allpass filter with variable Q.
 
@@ -363,13 +364,7 @@ def allpass(Wn, Q=1, analog=False, output='ba'):
     return _transform(b, a, Wn, analog, output)
 
 
-def peaking(Wn,
-            dBgain,
-            Q=None,
-            BW=None,
-            type='half',
-            analog=False,
-            output='ba'):
+def peaking(Wn, dBgain, Q=None, BW=None, type="half", analog=False, output="ba"):
     """
     Design an analog or digital biquad peaking filter with variable Q.
 
@@ -435,26 +430,26 @@ def peaking(Wn,
 
     """
     if Q is None and BW is None:
-        BW = 1    # octave
+        BW = 1  # octave
 
     if Q is None:
         # w0 = Wn
         # Q = 1/(2*sinh(ln(2)/2*BW*w0/sin(w0))) # digital filter w BLT
-        Q = 1 / (2 * sinh(ln(2) / 2 * BW))    # analog filter prototype
+        Q = 1 / (2 * sinh(ln(2) / 2 * BW))  # analog filter prototype
         # TODO: In testing, neither of these is even close to correct near
         # fs/2, and the difference between them is very small
 
-    if type in ('half'):
-        A = 10.0**(dBgain / 40.0)    # for peaking and shelving EQ filters only
+    if type in ("half"):
+        A = 10.0 ** (dBgain / 40.0)  # for peaking and shelving EQ filters only
         Az = A
         Ap = A
 
-    elif type in ('constantq'):
-        A = 10.0**(dBgain / 20.0)
-        if dBgain > 0:    # boost
+    elif type in ("constantq"):
+        A = 10.0 ** (dBgain / 20.0)
+        if dBgain > 0:  # boost
             Az = A
             Ap = 1
-        else:    # cut
+        else:  # cut
             Az = 1
             Ap = A
     else:
@@ -467,15 +462,17 @@ def peaking(Wn,
     return _transform(b, a, Wn, analog, output)
 
 
-def shelf(Wn,
-          dBgain,
-          Q=None,
-          S=None,
-          BW=None,
-          btype='low',
-          ftype='half',
-          analog=False,
-          output='ba'):
+def shelf(
+    Wn,
+    dBgain,
+    Q=None,
+    S=None,
+    BW=None,
+    btype="low",
+    ftype="half",
+    analog=False,
+    output="ba",
+):
     """
     Design an analog or digital biquad shelving filter with variable Q.
 
@@ -564,11 +561,12 @@ def shelf(Wn,
                 = sin(w0)*sinh( ln(2)/2 * BW * w0/sin(w0) )           (case: BW)
                 = sin(w0)/2 * sqrt( (A + 1/A)*(1/S - 1) + 2 )         (case: S)
         """
-        if Q is None and BW is None \
-                    and S is None:
+        if Q is None and BW is None and S is None:
             Q = 1 / sqrt(2)
-            print('Warning: Qfactor or Bandwidth or Slide are not set,'
-                  'Q set to 1/sqrt(1)')
+            print(
+                "Warning: Qfactor or Bandwidth or Slide are not set,"
+                "Q set to 1/sqrt(1)"
+            )
 
         if Q is not None:
             return np.sin(w0) / (2 * Q)
@@ -577,31 +575,33 @@ def shelf(Wn,
         elif S is not None:
             return np.sin(w0) / 2 * np.sqrt((A + 1 / A) * (1 / S - 1) + 2)
         else:
-            raise ValueError('Need to set Q, BW, or S')
+            raise ValueError("Need to set Q, BW, or S")
 
     alpha = None
-    if ftype in ('mid', 'half'):
-        A = 10.0**(dBgain / 40.0)    # for peaking and shelving EQ filters only
+    if ftype in ("mid", "half"):
+        A = 10.0 ** (dBgain / 40.0)  # for peaking and shelving EQ filters only
         Az = A
         Ap = A
 
-    elif ftype in ('outer'):
-        A = 10.0**(dBgain / 20.0
-                  )    # if gain is higher, after fc unity gain point move to x+
-        if dBgain > 0:    # boost
+    elif ftype in ("outer"):
+        A = 10.0 ** (
+            dBgain / 20.0
+        )  # if gain is higher, after fc unity gain point move to x+
+        if dBgain > 0:  # boost
             Az = A
             Ap = 1
-        else:    # cut
+        else:  # cut
             Az = 1
             Ap = A
 
-    elif ftype in ('inner'):
-        A = 10.0**(dBgain / 20.0
-                  )    # if gain is higher, after fc unity gain point move to y-
-        if dBgain > 0:    # boost
+    elif ftype in ("inner"):
+        A = 10.0 ** (
+            dBgain / 20.0
+        )  # if gain is higher, after fc unity gain point move to y-
+        if dBgain > 0:  # boost
             Az = 1
             Ap = A
-        else:    # cut
+        else:  # cut
             Az = A
             Ap = 1
     else:
@@ -612,11 +612,11 @@ def shelf(Wn,
     if Q is None:
         Q = np.sin(np.pi * Wn) / (2 * alpha)
 
-    if btype == 'low':
+    if btype == "low":
         # H(s) = A * (  s**2 + (sqrt(A)/Q)*s + A)/(A*s**2 + (sqrt(A)/Q)*s + 1)
         b = Ap * np.array([1, sqrt(Az) / Q, Az])
         a = np.array([Ap, sqrt(Ap) / Q, 1])
-    elif btype == 'high':
+    elif btype == "high":
         # H(s) = A * (A*s**2 + (sqrt(A)/Q)*s + 1)/(  s**2 + (sqrt(A)/Q)*s + A)
         b = Ap * np.array([Az, sqrt(Az) / Q, 1])
         a = np.array([1, sqrt(Ap) / Q, Ap])
@@ -626,30 +626,30 @@ def shelf(Wn,
     return _transform(b, a, Wn, analog, output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from scipy.signal import freqs
     import matplotlib.pyplot as plt
     from numpy import log10
 
-    for ftype in ('half', 'constantq'):
+    for ftype in ("half", "constantq"):
         plt.figure()
         for boost in range(-24, 0, 3):
             b, a = peaking(10, dBgain=boost, Q=sqrt(2), type=ftype, analog=True)
             w, h = freqs(b, a, 10000)
-            plt.plot(w, 20 * log10(abs(h)), 'r', alpha=0.5)
+            plt.plot(w, 20 * log10(abs(h)), "r", alpha=0.5)
 
         for boost in range(0, 25, 3):
             b, a = peaking(10, dBgain=boost, Q=sqrt(2), type=ftype, analog=True)
             w, h = freqs(b, a, 10000)
-            plt.plot(w, 20 * log10(abs(h)), 'b', alpha=0.5)
+            plt.plot(w, 20 * log10(abs(h)), "b", alpha=0.5)
 
-        plt.xscale('log')
+        plt.xscale("log")
         plt.title(f'Peaking filter, "{ftype}" frequency response')
         plt.xlim(0.1, 1000)
-        plt.xlabel('Frequency [radians / second]')
-        plt.ylabel('Amplitude [dB]')
+        plt.xlabel("Frequency [radians / second]")
+        plt.ylabel("Amplitude [dB]")
         plt.yticks(range(-24, 25, 3))
         plt.margins(0, 0.1)
-        plt.grid(True, color='0.7', linestyle='-', which='major', axis='both')
-        plt.grid(True, color='0.9', linestyle='-', which='minor', axis='both')
+        plt.grid(True, color="0.7", linestyle="-", which="major", axis="both")
+        plt.grid(True, color="0.9", linestyle="-", which="minor", axis="both")
         plt.show()

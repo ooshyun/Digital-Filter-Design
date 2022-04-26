@@ -1,23 +1,12 @@
 """Utility for Filter Design
-    cvt_pcm2wav, cvt2float, char2num, plot_freqresp, hilbert_from_scratch
-    class PlotProfile        
-    Reference
-    Shelving Filter Cascade with Adjustable Transition Slope and Bandwidth
-    Frank Schultz, Nara Hahn, Sascha Spors
-    In: Proc. of 148th AES Convention, Virtual Vienna, May 2020, Paper 10339
-    http://www.aes.org/e-lib/browse.cfm?elib=20756
-
+    Reference.
+        Shelving Filter Cascade with Adjustable Transition Slope and Bandwidth, Frank Schultz, Nara Hahn, Sascha Spors
+        In: Proc. of 148th AES Convention, Virtual Vienna, May 2020, Paper 10339
 """
+
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.signal import tf2sos, freqs
 from matplotlib import rcParams
-
-# edit
-import librosa
-import os
-import scipy.io.wavfile as wav
-from scipy.fftpack import *
 
 
 def halfpadloss_shelving_filter_num_den_coeff(G):
@@ -31,10 +20,10 @@ def halfpadloss_shelving_filter_num_den_coeff(G):
     """
     # when G is lower than 3dB, the original has problem -> this is possible
     # sign = 1(positive), 0(zero), -1(negative)
-    sign = np.sign(G)    # amplify/boost (1) or attenuate/cut (-1)
-    g = 10**(np.abs(G) / 20)    # linear gain
-    n1, n2 = g**(sign / 4), g**(sign / 2)    # numerator coeff
-    d1, d2 = 1 / n1, 1 / n2    # denominator coeff
+    sign = np.sign(G)  # amplify/boost (1) or attenuate/cut (-1)
+    g = 10 ** (np.abs(G) / 20)  # linear gain
+    n1, n2 = g ** (sign / 4), g ** (sign / 2)  # numerator coeff
+    d1, d2 = 1 / n1, 1 / n2  # denominator coeff
     return n1, n2, d1, d2
 
 
@@ -63,7 +52,7 @@ def low_shelving_1st_coeff(omega=1, G=-10 * np.log10(2)):
 
     """
     b, a = normalized_low_shelving_1st_coeff(G=G)
-    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
+    scale = omega ** np.arange(-2.0, 1.0)  # powers in the Laplace domain
     return b * scale, a * scale
 
 
@@ -92,7 +81,7 @@ def high_shelving_1st_coeff(omega=1, G=-10 * np.log10(2)):
 
     """
     b, a = normalized_high_shelving_1st_coeff(G=G)
-    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
+    scale = omega ** np.arange(-2.0, 1.0)  # powers in the Laplace domain
     return b * scale, a * scale
 
 
@@ -122,7 +111,7 @@ def low_shelving_2nd_coeff(omega=1, G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
 
     """
     b, a = normalized_low_shelving_2nd_coeff(G=G, Q=Q)
-    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
+    scale = omega ** np.arange(-2.0, 1.0)  # powers in the Laplace domain
 
     # Debugging
     # print(f'omega: {omega}, range {np.arange(-2., 1.)}, scale: {scale}')
@@ -156,7 +145,7 @@ def high_shelving_2nd_coeff(omega=1, G=-10 * np.log10(2), Q=1 / np.sqrt(2)):
 
     """
     b, a = normalized_high_shelving_2nd_coeff(G=G, Q=Q)
-    scale = omega**np.arange(-2., 1.)    # powers in the Laplace domain
+    scale = omega ** np.arange(-2.0, 1.0)  # powers in the Laplace domain
     return b * scale, a * scale
 
 
@@ -172,12 +161,12 @@ def db(x, *, power=False):
         conversion.
 
     """
-    with np.errstate(divide='ignore'):
+    with np.errstate(divide="ignore"):
         return (10 if power else 20) * np.log10(np.abs(x))
 
 
 def db2lin(x):
-    return 10**(x / 20)
+    return 10 ** (x / 20)
 
 
 def shelving_slope_parameters(slope=None, BWd=None, Gd=None):
@@ -205,7 +194,7 @@ def shelving_slope_parameters(slope=None, BWd=None, Gd=None):
         else:
             BWd = np.abs(Gd / slope)
     else:
-        print('At lest two parameters need to be specified.')
+        print("At lest two parameters need to be specified.")
     return slope, BWd, Gd
 
 
@@ -228,13 +217,13 @@ def shelving_filter_parameters(biquad_per_octave, **kwargs):
         from what is returned by `shelving_parameters`.
 
     """
-    print('shelving_filter_parameters')
-    print('Parameter')
-    print(f'{kwargs}')
+    print("shelving_filter_parameters")
+    print("Parameter")
+    print(f"{kwargs}")
     slope, BWd, Gd = shelving_slope_parameters(**kwargs)
 
     # Gd: Total Gain, slope = Gd / Bwd
-    print(f'slope: {slope}, Bwd: {BWd}, Gd: {Gd}')
+    print(f"slope: {slope}, Bwd: {BWd}, Gd: {Gd}")
     # if num_biqaud is below 1, then the gaid cannot be achieved.
     # It's focus on Octave based. So if it is based on above octave, then the slope will be steep.
     # But why they focus on Octave? because it is 'usually used' format' for grphical equailizer.
@@ -243,7 +232,7 @@ def shelving_filter_parameters(biquad_per_octave, **kwargs):
     Gb = -1 * slope / biquad_per_octave
     G = Gb * num_biquad
 
-    print(f'Gb: {Gb}, G: {G} {Gd}, num_biquad: {num_biquad}')
+    print(f"Gb: {Gb}, G: {G} {Gd}, num_biquad: {num_biquad}")
     print("---")
 
     return biquad_per_octave, num_biquad, Gb, G
@@ -281,7 +270,7 @@ def check_shelving_filter_validity(biquad_per_octave, **kwargs):
     # biquad_per_octave must be large enough
     # for slope < 12.04 dB at least one biquad per ocatve is required
     tmp = slope / (20 * np.log10(4))
-    if tmp > 1.:
+    if tmp > 1.0:
         if biquad_per_octave < tmp:
             flag[2] = False
     else:
@@ -299,7 +288,7 @@ def low_shelving_1st_cascade(w0, Gb, num_biquad, biquad_per_octave):
     """
     sos = np.zeros((num_biquad, 6))
     for m in range(num_biquad):
-        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave)
+        wm = w0 * 2 ** (-(m + 0.5) / biquad_per_octave)
         b, a = low_shelving_1st_coeff(omega=wm, G=Gb)
         sos[m] = tf2sos(b, a)
     return sos
@@ -314,17 +303,13 @@ def high_shelving_1st_cascade(w0, Gb, num_biquad, biquad_per_octave):
     """
     sos = np.zeros((num_biquad, 6))
     for m in range(num_biquad):
-        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave)
+        wm = w0 * 2 ** (-(m + 0.5) / biquad_per_octave)
         b, a = high_shelving_1st_coeff(omega=wm, G=Gb)
         sos[m] = tf2sos(b, a)
     return sos
 
 
-def low_shelving_2nd_cascade(w0,
-                             Gb,
-                             num_biquad,
-                             biquad_per_octave,
-                             Q=1 / np.sqrt(2)):
+def low_shelving_2nd_cascade(w0, Gb, num_biquad, biquad_per_octave, Q=1 / np.sqrt(2)):
     """Low shelving filter design using cascaded biquad filters.
 
     Parameters
@@ -350,19 +335,16 @@ def low_shelving_2nd_cascade(w0,
     """
     sos = np.zeros((num_biquad, 6))
     for m in range(num_biquad):
-        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave
-                     )    # key point it connected '2' value
+        wm = w0 * 2 ** (
+            -(m + 0.5) / biquad_per_octave
+        )  # key point it connected '2' value
         # sheving coff
         b, a = low_shelving_2nd_coeff(omega=wm, G=Gb, Q=Q)
         sos[m] = tf2sos(b, a)
     return sos
 
 
-def high_shelving_2nd_cascade(w0,
-                              Gb,
-                              num_biquad,
-                              biquad_per_octave,
-                              Q=1 / np.sqrt(2)):
+def high_shelving_2nd_cascade(w0, Gb, num_biquad, biquad_per_octave, Q=1 / np.sqrt(2)):
     """High shelving filter design using cascaded biquad filters.
 
     - see low_shelving_2nd_cascade()
@@ -371,7 +353,7 @@ def high_shelving_2nd_cascade(w0,
     """
     sos = np.zeros((num_biquad, 6))
     for m in range(num_biquad):
-        wm = w0 * 2**(-(m + 0.5) / biquad_per_octave)
+        wm = w0 * 2 ** (-(m + 0.5) / biquad_per_octave)
         b, a = high_shelving_2nd_coeff(omega=wm, G=Gb, Q=Q)
         sos[m] = tf2sos(b, a)
     return sos
@@ -406,7 +388,7 @@ def sosfreqs(sos, worN=200, plot=None):
         The frequency response.
 
     """
-    h = 1.
+    h = 1.0
     for row in sos:
         w, rowh = freqs(row[:3], row[3:], worN=worN, plot=plot)
         h *= rowh
@@ -447,7 +429,8 @@ def matchedz_zpk(s_zeros, s_poles, s_gain, fs):
 
     omega = 1j * np.pi * fs
     s_gain *= np.prod(
-        (omega - s_zeros) / (omega - s_poles) * (-1 - z_poles) / (-1 - z_zeros))
+        (omega - s_zeros) / (omega - s_poles) * (-1 - z_poles) / (-1 - z_zeros)
+    )
     return z_zeros, z_poles, np.abs(s_gain)
 
 
@@ -458,27 +441,26 @@ def nearest_value(x0, x, f):
 
 def set_rcparams():
     """Plot helping."""
-    rcParams['axes.linewidth'] = 0.5
-    rcParams['axes.edgecolor'] = 'black'
-    rcParams['axes.facecolor'] = 'None'
-    rcParams['axes.labelcolor'] = 'black'
-    rcParams['xtick.color'] = 'black'
-    rcParams['ytick.color'] = 'black'
-    rcParams['font.family'] = 'serif'
-    rcParams['font.size'] = 13
-    rcParams['text.usetex'] = True
-    rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
-    rcParams['text.latex.preamble'] = r'\usepackage{gensymb}'
-    rcParams['legend.title_fontsize'] = 10
+    rcParams["axes.linewidth"] = 0.5
+    rcParams["axes.edgecolor"] = "black"
+    rcParams["axes.facecolor"] = "None"
+    rcParams["axes.labelcolor"] = "black"
+    rcParams["xtick.color"] = "black"
+    rcParams["ytick.color"] = "black"
+    rcParams["font.family"] = "serif"
+    rcParams["font.size"] = 13
+    rcParams["text.usetex"] = True
+    rcParams["text.latex.preamble"] = r"\usepackage{amsmath}"
+    rcParams["text.latex.preamble"] = r"\usepackage{gensymb}"
+    rcParams["legend.title_fontsize"] = 10
 
 
 def set_outdir():
     """Plot helping."""
-    return '../graphics/'
+    return "../graphics/"
 
 
-def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control,
-                           bandwidth):
+def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control, bandwidth):
     """
     Parameters
     ----------
@@ -501,7 +483,7 @@ def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control,
     g_bandwidth = db2lin(G_bandwidth)
 
     z1 = np.exp(-1j * w_control)
-    z2 = z1**2
+    z2 = z1 ** 2
 
     poly = np.zeros((num_command, 3))
     poly[6] = 0.000321, 0.00474, 0.00544
@@ -510,12 +492,13 @@ def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control,
     poly[9] = -0.00751, 0.730, -0.0672
 
     for m, (Gp, gp, p, gb, wc, bw) in enumerate(
-            zip(G_proto, g_proto, poly, g_bandwidth, w_command, bandwidth)):
+        zip(G_proto, g_proto, poly, g_bandwidth, w_command, bandwidth)
+    ):
         G_nyquist = np.sign(Gp) * np.polyval(p, np.abs(Gp))
         gn = db2lin(G_nyquist)
-        gp2 = gp**2
-        gb2 = gb**2
-        gn2 = gn**2
+        gp2 = gp ** 2
+        gb2 = gb ** 2
+        gn2 = gn ** 2
 
         F = np.abs(gp2 - gb2)
 
@@ -527,18 +510,15 @@ def interaction_matrix_sge(G_proto, gain_factor, w_command, w_control,
         F01 = np.abs(gb2 - gn)
         F11 = np.abs(gb2 - gn2)
 
-        W2 = np.sqrt(G11 / G00) * np.tan(wc / 2)**2
+        W2 = np.sqrt(G11 / G00) * np.tan(wc / 2) ** 2
         DW = (1 + np.sqrt(F00 / F11) * W2) * np.tan(bw / 2)
-        C = F11 * DW**2 - 2 * W2 * (F01 - np.sqrt(F00 * F11))
+        C = F11 * DW ** 2 - 2 * W2 * (F01 - np.sqrt(F00 * F11))
         D = 2 * W2 * (G01 - np.sqrt(G00 * G11))
         A = np.sqrt((C + D) / F)
         B = np.sqrt((gp2 * C + gb2 * D) / F)
-        num = np.array([gn + W2 + B, -2 * (gn - W2),
-                        (gn - B + W2)]) / (1 + W2 + A)
-        den = np.array(
-            [1, -2 * (1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
-        H = (num[0] + num[1]*z1 + num[2]*z2)\
-            / (den[0] + den[1]*z1 + den[2]*z2)
+        num = np.array([gn + W2 + B, -2 * (gn - W2), (gn - B + W2)]) / (1 + W2 + A)
+        den = np.array([1, -2 * (1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
+        H = (num[0] + num[1] * z1 + num[2] * z2) / (den[0] + den[1] * z1 + den[2] * z2)
         G = db(H) / Gp
         leak[m] = np.abs(G)
     return leak
@@ -559,10 +539,10 @@ def peq_seg(g_ref, g_nyquist, g, g_bandwidth, w_command, bandwidth):
     bandwidth: float
         Bandwidth.
     """
-    g2 = g**2
-    gb2 = g_bandwidth**2
-    gr2 = g_ref**2
-    gn2 = g_nyquist**2
+    g2 = g ** 2
+    gb2 = g_bandwidth ** 2
+    gr2 = g_ref ** 2
+    gn2 = g_nyquist ** 2
     grn = g_ref * g_nyquist
 
     F = np.abs(g2 - gb2)
@@ -574,23 +554,29 @@ def peq_seg(g_ref, g_nyquist, g, g_bandwidth, w_command, bandwidth):
     F01 = np.abs(gb2 - grn)
     F11 = np.abs(gb2 - gn2)
 
-    W2 = np.sqrt(G11 / G00) * np.tan(w_command / 2)**2
+    W2 = np.sqrt(G11 / G00) * np.tan(w_command / 2) ** 2
     DW = (1 + np.sqrt(F00 / F11) * W2) * np.tan(bandwidth / 2)
 
-    C = F11 * DW**2 - 2 * W2 * (F01 - np.sqrt(F00 * F11))
+    C = F11 * DW ** 2 - 2 * W2 * (F01 - np.sqrt(F00 * F11))
     D = 2 * W2 * (G01 - np.sqrt(G00 * G11))
 
     A = np.sqrt((C + D) / F)
-    B = np.sqrt((g**2 * C + g_bandwidth**2 * D) / F)
+    B = np.sqrt((g ** 2 * C + g_bandwidth ** 2 * D) / F)
 
-    b = np.array([(g_nyquist + g_ref * W2 + B), -2 * (g_nyquist - g_ref * W2),
-                  (g_nyquist - B + g_ref * W2)]) / (1 + W2 + A)
+    b = np.array(
+        [
+            (g_nyquist + g_ref * W2 + B),
+            -2 * (g_nyquist - g_ref * W2),
+            (g_nyquist - B + g_ref * W2),
+        ]
+    ) / (1 + W2 + A)
     a = np.array([1, -2 * (1 - W2) / (1 + W2 + A), (1 + W2 - A) / (1 + W2 + A)])
     return b, a
 
 
-def optimized_peq_seg(gain_command, gain_proto, gain_factor, w_command,
-                      w_control, bandwidth):
+def optimized_peq_seg(
+    gain_command, gain_proto, gain_factor, w_command, w_control, bandwidth
+):
     """
     Parameters
     ----------
@@ -622,8 +608,7 @@ def optimized_peq_seg(gain_command, gain_proto, gain_factor, w_command,
     gain_control[1::2] = 0.5 * (gain_command[:-1] + gain_command[1:])
 
     # interaction matrix "B"
-    B = interaction_matrix_sge(gain_proto, gain_factor, w_command, w_control,
-                               bandwidth)
+    B = interaction_matrix_sge(gain_proto, gain_factor, w_command, w_control, bandwidth)
 
     gain2 = np.zeros((2 * num_command - 1, 1))
     gain2[::2, 0] = gain_command
@@ -634,9 +619,10 @@ def optimized_peq_seg(gain_command, gain_proto, gain_factor, w_command,
     weights[1::2] *= 0.5
     W = np.diag(weights)
 
-    gain_opt =\
-        np.matmul(np.linalg.inv(np.linalg.multi_dot([B, W, np.transpose(B)])),
-                  np.linalg.multi_dot([B, W, gain2]))
+    gain_opt = np.matmul(
+        np.linalg.inv(np.linalg.multi_dot([B, W, np.transpose(B)])),
+        np.linalg.multi_dot([B, W, gain2]),
+    )
     gain_opt_bandwidth = gain_factor * gain_opt
 
     gain_opt = np.squeeze(gain_opt)
@@ -654,7 +640,8 @@ def optimized_peq_seg(gain_command, gain_proto, gain_factor, w_command,
     b_opt = np.zeros((3, num_command))
     a_opt = np.zeros((3, num_command))
     for m, (Go, go, gob, wc, bw, p) in enumerate(
-            zip(gain_opt, g_opt, g_opt_bandwidth, w_command, bandwidth, poly)):
+        zip(gain_opt, g_opt, g_opt_bandwidth, w_command, bandwidth, poly)
+    ):
         gain_nyquist = np.sign(Go) * np.polyval(p, np.abs(Go))
         b, a = peq_seg(1, db2lin(gain_nyquist), go, gob, wc, bw)
         b_opt[:, m] = b
@@ -729,7 +716,7 @@ def effective_order(w1, w2, Gd, rB=None):
         Gain per octave.
     """
     if rB is None:
-        rB = db(2) * np.sign(Gd)    # Butterworth
+        rB = db(2) * np.sign(Gd)  # Butterworth
     return Gd / rB / np.log2(w2 / w1)
 
 
@@ -746,10 +733,17 @@ def complex_zp_angles(n_int, n_frac):
     """
     # linear interpolation of angles
     num_zp_pair = int(n_int + 1) // 2
-    return np.pi / 2 * np.stack([(1 - n_frac) * (1 +
-                                                 (2 * m + 1) / n_int) + n_frac *
-                                 (1 + (2 * m + 1) / (n_int + 1))
-                                 for m in range(num_zp_pair)])
+    return (
+        np.pi
+        / 2
+        * np.stack(
+            [
+                (1 - n_frac) * (1 + (2 * m + 1) / n_int)
+                + n_frac * (1 + (2 * m + 1) / (n_int + 1))
+                for m in range(num_zp_pair)
+            ]
+        )
+    )
 
 
 def real_zp(n_int, n_frac, w_lower, w_upper):
@@ -775,156 +769,13 @@ def real_zp(n_int, n_frac, w_lower, w_upper):
         Larger real-valued zero or pole.
     """
     w_mean = np.sqrt(w_lower * w_upper)
-    ratio = (w_upper / w_lower)
+    ratio = w_upper / w_lower
 
     # logarithmic interpolation of zero/pole radius
-    if n_int % 2 == 0:    # even
-        s_lower = -w_mean * ratio**(-n_frac / 2)
-        s_upper = -w_mean * ratio**(n_frac / 2)
-    elif n_int % 2 == 1:    # odd
-        s_lower = -w_lower * ratio**(n_frac / 2)
-        s_upper = -w_upper * ratio**(-n_frac / 2)
+    if n_int % 2 == 0:  # even
+        s_lower = -w_mean * ratio ** (-n_frac / 2)
+        s_upper = -w_mean * ratio ** (n_frac / 2)
+    elif n_int % 2 == 1:  # odd
+        s_lower = -w_lower * ratio ** (n_frac / 2)
+        s_upper = -w_upper * ratio ** (-n_frac / 2)
     return s_lower, s_upper
-
-
-# Custom functions
-def cvt_pcm2wav(from_file, to_file, sampling_freq, dtype):
-    """Convert PCM file to WAV file.
-        Not prove yet, it is not match with matlab convert.
-    """
-    with open(from_file, 'rb') as opened_pcm_file:
-        buf = opened_pcm_file.read()
-        pcm_data = np.frombuffer(buf, dtype=dtype)
-        wav_data = librosa.util.buf_to_float(pcm_data, 2)
-    wav.write(to_file, sampling_freq, wav_data)
-
-
-def hilbert_from_scratch(u):
-    # N : fft length, M : number of elements to zero out
-    # U : DFT of u, v : IDFT of H(U)
-    N = len(u)
-
-    # take forward Fourier transform
-    U = fft(u)
-    M = N - N // 2 - 1
-
-    # zero out negative frequency components
-    U[N // 2 + 1:] = [0] * M
-
-    # double fft energy except @ DC0
-    U[1:N // 2] = 2 * U[1:N // 2]
-
-    # take inverse Fourier transform
-    v = ifft(U)
-    return v
-
-
-def cvt2float(coeff):
-    from lib.fi import fi
-    coeff = np.array(coeff).tolist()
-
-    for location in range(len(coeff)):
-        for i in range(len(coeff[location])):
-            coeff[location][i] = fi(coeff[location][i], 1, 32, 30, 1, 'Hex')
-
-    for location in range(len(coeff)):
-        print("{", end='')
-        for i in range(len(coeff[location])):
-            print(coeff[location][i], end='')
-            if i == len(coeff[location]) - 1:
-                continue
-            else:
-                print(', ', end='')
-        print("}")
-
-
-def char2num(array: list):
-    for i in range(len(array)):
-        if isinstance(array[i], list):
-            char2num(array[i])
-        else:
-            if isinstance(array[i], str):
-                if 'j' in array[i]:
-                    array[i] = complex(array[i])
-                else:
-                    array[i] = float(array[i])
-            elif isinstance(array[i], float):
-                pass
-            elif isinstance(array[i], int):
-                pass
-            else:
-                raise ValueError('Wrong type')
-
-def plot_freqresp(ax: plt.axes,
-                  x,
-                  y,
-                  xaxis,
-                  xlim,
-                  xlabels,
-                  xtitle=None,
-                  yaxis=None,
-                  ylim=None,
-                  ylabels=None,
-                  ytitle=None):
-    # ax.semilogx(x, y)
-    ax.plot(x, y)
-    ax.set_xscale('log')
-    ax.set_xlim(xlim)
-    if ylim:
-        ax.set_ylim(ylim)
-    ax.set_xticks(xaxis)
-    ax.set_xticklabels(xlabels)
-    ax.minorticks_off()
-    ax.grid(True)
-    ax.set_xlabel(xtitle)
-    ax.set_ylabel(ytitle)
-
-def plot_audacity_freq_response():
-    root = os.getcwd()
-    origin = os.path.join(root, "result/audacity/White Noise.txt")
-    process = os.path.join(root, "result/audacity/whitenoise_coeff_test_5_audacity.txt")
-    files = [origin, process]
-
-    graphs = []
-    for idx, file in enumerate(files):
-        f = open(file, "r").read().split("\n")[1:-1]
-        graph = []
-        for i in range(len(f)):
-            freq, amp = f[i].split("\t")
-            graph.append(np.array([float(freq), float(amp)]))
-        graph = np.array(graph).T
-        graphs.append(graph)
-    return graphs[1][0], graphs[1][1] - graphs[0][1]
-
-class PlotProfile(object):
-
-    def __init__(self,
-                 x,
-                 y,
-                 type='scatter',
-                 marker=None,
-                 color=None,
-                 xlim=None,
-                 ylim=None,
-                 xscale=None,
-                 yscale=None,
-                 label=None,
-                 grid=None):
-        self.x = x
-        self.y = y
-        self.type = type
-        self.xlim = xlim
-        self.ylim = ylim
-        self.marker = marker
-        self.color = color
-        self.xscale = xscale
-        self.yscale = yscale
-        self.label = label
-        self.grid = grid
-        self.variables = [key for key in locals().keys() if key != 'self']
-
-    def get(self):
-        return [self.__getattribute__(var_name) for var_name in self.variables]
-
-def pcm2wav(self):
-    raise NotImplementedError

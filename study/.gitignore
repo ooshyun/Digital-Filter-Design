@@ -1,0 +1,10 @@
+**
+!concurrency/
+!fft_scratch/
+!fir/
+!phase_group_delay/
+!python_basic/
+!sgfilter/
+!hilbert_transform/
+!pole_zero_analysis/
+!*.py

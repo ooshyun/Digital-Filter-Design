@@ -61,7 +61,6 @@ import sys
 
 
 class packet(object):
-
     def __init__(self):
         self.timecounter = None
         self.dataLength = None
@@ -90,19 +89,14 @@ class packet(object):
         return buf_packet
 
 
-def _print_progress(iteration,
-                    total,
-                    prefix='',
-                    suffix='',
-                    decimals=1,
-                    barLength=50):
+def _print_progress(iteration, total, prefix="", suffix="", decimals=1, barLength=50):
     formatStr = "{0:." + str(decimals) + "f}"
     percent = formatStr.format(100 * (iteration / float(total)))
     filledLength = int(round(barLength * iteration / float(total)))
-    bar = '#' * filledLength + '-' * (barLength - filledLength)
-    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percent, '%', suffix)),
+    bar = "#" * filledLength + "-" * (barLength - filledLength)
+    sys.stdout.write("\r%s |%s| %s%s %s" % (prefix, bar, percent, "%", suffix)),
     if iteration == total:
-        sys.stdout.write('\n')
+        sys.stdout.write("\n")
     sys.stdout.flush()
 
 
@@ -117,30 +111,32 @@ def _get_file_details(in_file_name):
         outdata["channels"] = 1
         outdata["length_samples"] = len(wav_data)
         outdata["length_seconds"] = len(wav_data) / wav_freq
-    if wav_data.dtype == 'int16':
-        outdata["data_type"] = 'int16'
-    elif wav_data.dtype == 'int32':
-        outdata["data_type"] = 'int32'
-    elif wav_data.dtype == 'float32':
-        outdata["data_type"] = 'float32'
+    if wav_data.dtype == "int16":
+        outdata["data_type"] = "int16"
+    elif wav_data.dtype == "int32":
+        outdata["data_type"] = "int32"
+    elif wav_data.dtype == "float32":
+        outdata["data_type"] = "float32"
 
     return outdata
 
 
-def wave_file_process(in_file_name="",
-                      get_file_details=False,
-                      out_file_name="",
-                      progress_bar=True,
-                      stereo=True,
-                      overlap=75,
-                      block_size=128,
-                      zero_pad=True,
-                      pre_proc_func=None,
-                      freq_proc_func=None,
-                      post_proc_func=None,
-                      queue_shared=None,
-                      parameter=None,
-                      full_freq_proc_func=None):
+def wave_file_process(
+    in_file_name="",
+    get_file_details=False,
+    out_file_name="",
+    progress_bar=True,
+    stereo=True,
+    overlap=75,
+    block_size=128,
+    zero_pad=True,
+    pre_proc_func=None,
+    freq_proc_func=None,
+    post_proc_func=None,
+    queue_shared=None,
+    parameter=None,
+    full_freq_proc_func=None,
+):
     if not get_file_details:
         print("\n#################  Wave File Process #################")
 
@@ -152,7 +148,7 @@ def wave_file_process(in_file_name="",
         # Reading the wave file
         wav_freq, wav_data = wav.read(in_file_name)
     elif isinstance(in_file_name, dict):
-        wav_freq, wav_data = in_file_name['sr'], in_file_name['data']
+        wav_freq, wav_data = in_file_name["sr"], in_file_name["data"]
     else:
         print("ERROR: No wav file name entered")
         return None
@@ -162,8 +158,11 @@ def wave_file_process(in_file_name="",
     if get_file_details:
         return _get_file_details(in_file_name)
 
-    if (pre_proc_func is None) and (freq_proc_func is None) and (post_proc_func
-                                                                 is None):
+    if (
+        (pre_proc_func is None)
+        and (freq_proc_func is None)
+        and (post_proc_func is None)
+    ):
         print(
             "WARNING: No process function entered, no process will be applied to the file"
         )
@@ -181,13 +180,13 @@ def wave_file_process(in_file_name="",
 
     # Checking the input bit depth (no support for 8 and 24 bit PCM)
     bit_depth = 0
-    if wav_data.dtype == 'int16':
+    if wav_data.dtype == "int16":
         bit_depth = 15
-    elif wav_data.dtype == 'int32':
+    elif wav_data.dtype == "int32":
         bit_depth = 31
-    elif wav_data.dtype == 'float32':
+    elif wav_data.dtype == "float32":
         bit_depth = 0
-    elif wav_data.dtype == 'float64':
+    elif wav_data.dtype == "float64":
         bit_depth = 0
 
     # Checking the NFFT value
@@ -217,10 +216,13 @@ def wave_file_process(in_file_name="",
         new_frame_size = int(fft_frame_size / 4)
 
     # Getting the window function
-    hanning = np.array([(0.5 - (0.5 * math.cos(
-        (2 * math.pi * i) / (fft_frame_size - 1))))
-                        for i in range(fft_frame_size)],
-                       dtype='float64')
+    hanning = np.array(
+        [
+            (0.5 - (0.5 * math.cos((2 * math.pi * i) / (fft_frame_size - 1))))
+            for i in range(fft_frame_size)
+        ],
+        dtype="float64",
+    )
     """Initializing the static variables used in WOLA operation"""
     output_index_start, output_index_end = 0, new_frame_size
     # Checking if input file is stereo and normalizing buffers
@@ -228,22 +230,22 @@ def wave_file_process(in_file_name="",
     wav_data_left = None
     wav_data_right = None
     if len(wav_data.shape) == 1:
-        wav_data_left = wav_data / (2**bit_depth)
+        wav_data_left = wav_data / (2 ** bit_depth)
         if stereo:
-            wav_data_right = wav_data / (2**bit_depth)
+            wav_data_right = wav_data / (2 ** bit_depth)
 
     elif len(wav_data.shape) == 2:
-        wav_data_left = ((wav_data[:, 0] / (2**bit_depth)) +
-                         (wav_data[:, 1] / (2**bit_depth))) / 2
+        wav_data_left = (
+            (wav_data[:, 0] / (2 ** bit_depth)) + (wav_data[:, 1] / (2 ** bit_depth))
+        ) / 2
         if stereo:
-            wav_data_right = wav_data[:, 1] / (2**bit_depth)
+            wav_data_right = wav_data[:, 1] / (2 ** bit_depth)
     else:
         raise ValueError("ERROR: Wrong number of dimensions in wav file")
 
     # Getting the different frames for left and right
     frames_data_left = [
-        wav_data_left[(i * new_frame_size):(i * new_frame_size +
-                                            new_frame_size)]
+        wav_data_left[(i * new_frame_size) : (i * new_frame_size + new_frame_size)]
         for i in range(int(len(wav_data_left) / new_frame_size))
     ]
 
@@ -270,8 +272,7 @@ def wave_file_process(in_file_name="",
 
     if stereo:
         frames_data_right = [
-            wav_data_right[(i * new_frame_size) \
-                            :(i * new_frame_size + new_frame_size)]
+            wav_data_right[(i * new_frame_size) : (i * new_frame_size + new_frame_size)]
             for i in range(int(len(wav_data_left) / new_frame_size))
         ]
         output_right = np.zeros(len(wav_data))
@@ -315,8 +316,7 @@ def wave_file_process(in_file_name="",
                 indata = [new_frame_left, new_frame_right]
                 counter.set(data=indata)
 
-                _, outdata = pre_proc_func(counter, queue_shared,
-                                           parameter).__get__()
+                _, outdata = pre_proc_func(counter, queue_shared, parameter).__get__()
 
                 pre_processed_frame_left = outdata[0]
                 pre_processed_frame_right = outdata[1]
@@ -325,29 +325,32 @@ def wave_file_process(in_file_name="",
                 counter.set(data=indata)
 
                 _, pre_processed_frame_left = pre_proc_func(
-                    counter, queue_shared, parameter).__get__()
+                    counter, queue_shared, parameter
+                ).__get__()
         """Overlap"""
         # Checking if 50% overlap to set the FFT input buffer
         if overlap == 50:
             input_frames_left[:block_size] = input_frames_left[block_size:]
             input_frames_left[block_size:] = pre_processed_frame_left
             if stereo:
-                input_frames_right[:block_size] = input_frames_right[
-                    block_size:]
+                input_frames_right[:block_size] = input_frames_right[block_size:]
                 input_frames_right[block_size:] = pre_processed_frame_right
 
         # Checking if 75% overlap to set the FFT input buffer
         elif overlap == 75:
-            input_frames_left[:3 *
-                              block_size] = input_frames_left[block_size:4 *
-                                                              block_size]
-            input_frames_left[3 * block_size:4 *
-                              block_size] = pre_processed_frame_left
+            input_frames_left[: 3 * block_size] = input_frames_left[
+                block_size : 4 * block_size
+            ]
+            input_frames_left[
+                3 * block_size : 4 * block_size
+            ] = pre_processed_frame_left
             if stereo:
-                input_frames_right[:3 * block_size] = input_frames_right[
-                    block_size:4 * block_size]
-                input_frames_right[3 * block_size:4 *
-                                   block_size] = pre_processed_frame_right
+                input_frames_right[: 3 * block_size] = input_frames_right[
+                    block_size : 4 * block_size
+                ]
+                input_frames_right[
+                    3 * block_size : 4 * block_size
+                ] = pre_processed_frame_right
 
         else:
             raise ValueError("Overlap must be 50% or 75%")
@@ -373,8 +376,9 @@ def wave_file_process(in_file_name="",
                 indata = [fft_out_left, fft_out_right]
                 counter.set(data=indata)
 
-                _, outdata = full_freq_proc_func(counter, queue_shared,
-                                                 parameter).__get__()
+                _, outdata = full_freq_proc_func(
+                    counter, queue_shared, parameter
+                ).__get__()
 
                 full_freq_processed_frame_left = outdata[0]
                 full_freq_processed_frame_right = outdata[1]
@@ -383,12 +387,12 @@ def wave_file_process(in_file_name="",
                 counter.set(data=indata)
 
                 _, full_freq_processed_frame_left = full_freq_proc_func(
-                    counter, queue_shared, parameter).__get__()
+                    counter, queue_shared, parameter
+                ).__get__()
         """Removing reflection"""
-        fft_channels_left = full_freq_processed_frame_left[:(int(nfft / 2) + 1)]
+        fft_channels_left = full_freq_processed_frame_left[: (int(nfft / 2) + 1)]
         if stereo:
-            fft_channels_right = full_freq_processed_frame_right[:(
-                int(nfft / 2) + 1)]
+            fft_channels_right = full_freq_processed_frame_right[: (int(nfft / 2) + 1)]
 
         # Checking if there is a frequency domain process function
         # No frequency domain process function just copies the input
@@ -404,8 +408,7 @@ def wave_file_process(in_file_name="",
                 indata = [fft_channels_left, fft_channels_right]
                 counter.set(data=indata)
 
-                _, outdata = freq_proc_func(counter, queue_shared,
-                                            parameter).__get__()
+                _, outdata = freq_proc_func(counter, queue_shared, parameter).__get__()
 
                 freq_processed_frame_left = outdata[0]
                 freq_processed_frame_right = outdata[1]
@@ -414,31 +417,30 @@ def wave_file_process(in_file_name="",
                 counter.set(data=indata)
 
                 _, freq_processed_frame_left = freq_proc_func(
-                    counter, queue_shared, parameter).__get__()
+                    counter, queue_shared, parameter
+                ).__get__()
         """Mirror the spectrum"""
-        fft_out_left[:int(nfft / 2)] = freq_processed_frame_left[:int(nfft / 2)]
+        fft_out_left[: int(nfft / 2)] = freq_processed_frame_left[: int(nfft / 2)]
 
         # Mirror copy except bias
-        temp_mirror = freq_processed_frame_left[1:int(nfft / 2)]
+        temp_mirror = freq_processed_frame_left[1 : int(nfft / 2)]
 
         # To make the reverse bin array for mirror
         temp_mirror = temp_mirror[::-1]
-        fft_out_left[int(nfft / 2) + 1:] = np.conj(temp_mirror)
+        fft_out_left[int(nfft / 2) + 1 :] = np.conj(temp_mirror)
 
         # Nyquist
         fft_out_left[int(nfft / 2)] = freq_processed_frame_left[int(nfft / 2)]
         if stereo:
-            fft_out_right[:int(nfft /
-                               2)] = freq_processed_frame_right[:int(nfft / 2)]
+            fft_out_right[: int(nfft / 2)] = freq_processed_frame_right[: int(nfft / 2)]
 
             # Mirror copy except bias
-            temp_mirror = freq_processed_frame_right[1:int(nfft / 2)]
+            temp_mirror = freq_processed_frame_right[1 : int(nfft / 2)]
             temp_mirror = temp_mirror[::-1]
-            fft_out_right[int(nfft / 2) + 1:] = np.conj(temp_mirror)
+            fft_out_right[int(nfft / 2) + 1 :] = np.conj(temp_mirror)
 
             # Nyquist
-            fft_out_right[int(nfft / 2)] = freq_processed_frame_right[int(nfft /
-                                                                          2)]
+            fft_out_right[int(nfft / 2)] = freq_processed_frame_right[int(nfft / 2)]
         """FFT operation"""
         ifft_in_left = np.fft.ifft(fft_out_left)
         if stereo:
@@ -448,34 +450,48 @@ def wave_file_process(in_file_name="",
         # For 50% overlap no second window needed
         if overlap == 50:
             ifft_out_left = ifft_in_left[:fft_frame_size].real
-            out_frame_left = ifft_out_left[:new_frame_size] \
-                            + windowed_frame_left[:new_frame_size]
+            out_frame_left = (
+                ifft_out_left[:new_frame_size] + windowed_frame_left[:new_frame_size]
+            )
             windowed_frame_left = ifft_out_left[new_frame_size:]
             if stereo:
                 ifft_out_right = ifft_in_right[:fft_frame_size].real
-                out_frame_right = ifft_out_right[:new_frame_size] \
-                                + windowed_frame_right[:new_frame_size]
+                out_frame_right = (
+                    ifft_out_right[:new_frame_size]
+                    + windowed_frame_right[:new_frame_size]
+                )
                 windowed_frame_right = ifft_out_right[new_frame_size:]
 
         # For 75% applying second window with gain adjustment to normalize output (-1< out <1)
         elif overlap == 75:
-            ifft_out_left = np.float64(
-                ifft_in_left[:fft_frame_size].real) * hanning * 2 / 3
-            out_frame_left = ifft_out_left[:new_frame_size] \
-                            + windowed_frame_left[:new_frame_size]
-            windowed_frame_left[:2 * new_frame_size] = windowed_frame_left[new_frame_size:3 * new_frame_size] \
-                                                    + ifft_out_left[new_frame_size:3 * new_frame_size]
-            windowed_frame_left[2 * new_frame_size:] = ifft_out_left[
-                3 * new_frame_size:]
+            ifft_out_left = (
+                np.float64(ifft_in_left[:fft_frame_size].real) * hanning * 2 / 3
+            )
+            out_frame_left = (
+                ifft_out_left[:new_frame_size] + windowed_frame_left[:new_frame_size]
+            )
+            windowed_frame_left[: 2 * new_frame_size] = (
+                windowed_frame_left[new_frame_size : 3 * new_frame_size]
+                + ifft_out_left[new_frame_size : 3 * new_frame_size]
+            )
+            windowed_frame_left[2 * new_frame_size :] = ifft_out_left[
+                3 * new_frame_size :
+            ]
             if stereo:
-                ifft_out_right = np.float64(
-                    ifft_in_right[:fft_frame_size].real) * hanning * 2 / 3
-                out_frame_right = ifft_out_right[:new_frame_size] \
-                                + windowed_frame_right[:new_frame_size]
-                windowed_frame_right[:2 * new_frame_size] = windowed_frame_right[new_frame_size:3 * new_frame_size] \
-                                                        + ifft_out_left[new_frame_size:3 * new_frame_size]
-                windowed_frame_right[2 * new_frame_size:] = ifft_out_right[
-                    3 * new_frame_size:]
+                ifft_out_right = (
+                    np.float64(ifft_in_right[:fft_frame_size].real) * hanning * 2 / 3
+                )
+                out_frame_right = (
+                    ifft_out_right[:new_frame_size]
+                    + windowed_frame_right[:new_frame_size]
+                )
+                windowed_frame_right[: 2 * new_frame_size] = (
+                    windowed_frame_right[new_frame_size : 3 * new_frame_size]
+                    + ifft_out_left[new_frame_size : 3 * new_frame_size]
+                )
+                windowed_frame_right[2 * new_frame_size :] = ifft_out_right[
+                    3 * new_frame_size :
+                ]
         """Post process"""
         # Checking if there is a post process function
         # No post process function just copies the input
@@ -488,10 +504,7 @@ def wave_file_process(in_file_name="",
         else:
             # Adding the 2 streams in one list
             if stereo:
-                indata = [
-                    np.empty(len(new_frame_left)),
-                    np.empty(len(new_frame_left))
-                ]
+                indata = [np.empty(len(new_frame_left)), np.empty(len(new_frame_left))]
                 indata[0] = out_frame_left
                 indata[1] = out_frame_right
                 counter.set(data=indata)
@@ -505,16 +518,17 @@ def wave_file_process(in_file_name="",
                 indata = out_frame_left
                 counter.set(data=indata)
                 _, post_processed_frame_left = post_proc_func(
-                    counter, queue_shared).__get__()
+                    counter, queue_shared
+                ).__get__()
         """Appending to Output"""
         # Adding the current frame to the output buffer
-        output_left[
-            output_index_start:
-            output_index_end] = post_processed_frame_left[:new_frame_size]
+        output_left[output_index_start:output_index_end] = post_processed_frame_left[
+            :new_frame_size
+        ]
         if stereo:
             output_right[
-                output_index_start:
-                output_index_end] = post_processed_frame_right[:new_frame_size]
+                output_index_start:output_index_end
+            ] = post_processed_frame_right[:new_frame_size]
 
         output_index_start += new_frame_size
         output_index_end += new_frame_size
@@ -540,22 +554,29 @@ def wave_file_process(in_file_name="",
         if stereo:
             right = np.float32(output_right)
             data = np.vstack((left, right)).T
+        print(out_file_name)
         wav.write(out_file_name, wav_freq, data)
 
 
 if __name__ == "__main__":
-    in_file = '/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise.wav'
-    out_file = '/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Test.wav'
-    wave_file_process(in_file_name=in_file,
-                      out_file_name=out_file,
-                      stereo=False,
-                      block_size=512,
-                      progress_bar=True)
+    in_file = (
+        "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise.wav"
+    )
+    out_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Test.wav"
+    wave_file_process(
+        in_file_name=in_file,
+        out_file_name=out_file,
+        stereo=False,
+        block_size=512,
+        progress_bar=True,
+    )
 
-    in_file = '/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo.wav'
-    out_file = '/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo Test.wav'
-    wave_file_process(in_file_name=in_file,
-                      out_file_name=out_file,
-                      stereo=True,
-                      block_size=512,
-                      progress_bar=True)
+    in_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo.wav"
+    out_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo Test.wav"
+    wave_file_process(
+        in_file_name=in_file,
+        out_file_name=out_file,
+        stereo=True,
+        block_size=512,
+        progress_bar=True,
+    )

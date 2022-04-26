@@ -2,19 +2,20 @@
 """
 import sys, time
 
-
-TIME_CHECK = {}
+_TIME_CHECK = {}
 
 
 def check_time(func):
     def _check_time(*args, **kwargs):
-        global TIME_CHECK
+        global _TIME_CHECK
         curr_time = time.perf_counter()
         result = func(*args, **kwargs)
-        if func not in TIME_CHECK.keys():
-            TIME_CHECK[func] = time.perf_counter() - curr_time
+        if func not in _TIME_CHECK.keys():
+            _TIME_CHECK[func] = time.perf_counter() - curr_time
         else:
-            TIME_CHECK[func] = (TIME_CHECK[func] + time.perf_counter() - curr_time) / 2
+            _TIME_CHECK[func] = (
+                _TIME_CHECK[func] + time.perf_counter() - curr_time
+            ) / 2
         # print(f"Time: {func}, {time.perf_counter() - curr_time}")
 
         return result
@@ -23,12 +24,12 @@ def check_time(func):
 
 
 def print_func_time():
-    global TIME_CHECK
-    for key, value in zip(TIME_CHECK.keys(), TIME_CHECK.values()):
+    global _TIME_CHECK
+    for key, value in zip(_TIME_CHECK.keys(), _TIME_CHECK.values()):
         print(
             key, str(round(value * 1000, 3)) + " ms",
         )
-    TIME_CHECK = {}
+    _TIME_CHECK = {}
 
 
 def print_progress(iteration, total, prefix="", suffix="", decimals=1, barLength=100):
@@ -59,6 +60,7 @@ def print_progress(iteration, total, prefix="", suffix="", decimals=1, barLength
 
 if __name__ == "__main__":
     """Time tracking example"""
+
     @check_time
     def hello(name):
         print(f"Hello Guys, I'm {name}")

@@ -1,24 +1,22 @@
 """Example for several function to analyze the signal processing
-    This is testing file for as below,
-    - Fi command
-    - 2nd interpolation
-    - Hibert transform from signal in time-domain and amplitude frequency-domain
-    - Make Matrix to Even-odd cross matrix
+   [TODO]
 
-    TODO:
-    - pitch detection algorithm
-        librosa.pyin, pysptk 
-        pysptk 나 pyin 과 같은 pitch detection algorithm을 사용하여 프레임별로 f0 를 추출하고, 
-        원하는 기준에 맞추어 일정 수준 이상의 값을 고르시는 방법
 """
-import math
-import scipy
-from scipy.fftpack import *
-import numpy as np
+import json
 import matplotlib.pyplot as plt
-from lib.fi import fi
-from lib.util import hilbert_from_scratch
+from scipy.fftpack import *
+import scipy.io.wavfile as wav
+import numpy as np
+from numpy import log10, pi, sqrt
+import matplotlib.pyplot as plt
 
+
+from src import (
+    FilterAnalyzePlot,
+    WaveProcessor,
+    cvt_float2fixed,
+    fi,
+)
 
 def example_fi():
     """Test fi command
@@ -127,311 +125,578 @@ def example_fi():
 
     print(fi(gain, 1, 16, 15, 0, "Dec"))
 
-
-def example_2ndinterpolation():
-    """Example for interpolation
-    """
-    from scipy.interpolate import (
-        PchipInterpolator,
-        pchip_interpolate,
-        CubicHermiteSpline,
-        CubicSpline,
+    # convert text hex of fixed point to floating point, Q 1.31, data is hanning window
+    data = "0x00000000,0x0004f92c,0x0013e3eb,0x002cbdeb,0x004f834f,0x007c2eb0,0x00b2b91c,0x00f31a1b,0x013d47a9,0x01913640,0x01eed8d5,0x025620da,0x02c6fe42,0x03415f82,0x03c53195,0x04526000,0x04e8d4cf,0x058878a2,0x063132a9,0x06e2e8aa,0x079d7f08,0x0860d8c2,0x092cd77c,0x0a015b82,0x0ade43cc,0x0bc36e07,0x0cb0b692,0x0da5f88f,0x0ea30ddf,0x0fa7cf2d,0x10b413f1,0x11c7b27c,0x12e27ff5,0x1404506b,0x152cf6d2,0x165c4510,0x17920c00,0x18ce1b7e,0x1a10426b,0x1b584eb6,0x1ca60d62,0x1df94a92,0x1f51d18b,0x20af6cc3,0x2211e5e3,0x237905d5,0x24e494c7,0x26545a3a,0x27c81d05,0x293fa360,0x2abab2ef,0x2c3910c9,0x2dba817f,0x2f3ec92c,0x30c5ab76,0x324eeb9d,0x33da4c84,0x356790b7,0x36f67a79,0x3886cbca,0x3a184673,0x3baaac0f,0x3d3dbe13,0x3ed13ddb,0x4064ecb0,0x41f88bd6,0x438bdc92,0x451ea035,0x46b09827,0x484185ee,0x49d12b3b,0x4b5f49f2,0x4ceba432,0x4e75fc63,0x4ffe1539,0x5183b1c6,0x5306957c,0x54868439,0x56034253,0x577c949d,0x58f24073,0x5a640bc0,0x5bd1bd0e,0x5d3b1b85,0x5e9feefd,0x60000000,0x615b17d7,0x62b10090,0x64018507,0x654c70f1,0x669190de,0x67d0b247,0x6909a392,0x6a3c341e,0x6b683444,0x6c8d7565,0x6dabc9ed,0x6ec3055c,0x6fd2fc4c,0x70db8479,0x71dc74c5,0x72d5a543,0x73c6ef37,0x74b02d22,0x75913ac4,0x7669f522,0x773a3a8e,0x7801eaa9,0x78c0e66b,0x79771024,0x7a244b86,0x7ac87da3,0x7b638cf8,0x7bf5616a,0x7c7de450,0x7cfd0072,0x7d72a20f,0x7ddeb6df,0x7e412e15,0x7e99f865,0x7ee90801,0x7f2e50a0,0x7f69c77d,0x7f9b635a,0x7fc31c83,0x7fe0ecc9,0x7ff4cf8b,0x7ffec1b2,0x7ffec1b2,0x7ff4cf8b,0x7fe0ecc9,0x7fc31c83,0x7f9b635a,0x7f69c77d,0x7f2e50a0,0x7ee90801,0x7e99f865,0x7e412e15,0x7ddeb6df,0x7d72a20f,0x7cfd0072,0x7c7de450,0x7bf5616a,0x7b638cf8,0x7ac87da3,0x7a244b86,0x79771024,0x78c0e66b,0x7801eaa9,0x773a3a8e,0x7669f522,0x75913ac4,0x74b02d22,0x73c6ef37,0x72d5a543,0x71dc74c5,0x70db8479,0x6fd2fc4c,0x6ec3055c,0x6dabc9ed,0x6c8d7565,0x6b683444,0x6a3c341e,0x6909a392,0x67d0b247,0x669190de,0x654c70f1,0x64018507,0x62b10090,0x615b17d7,0x60000000,0x5e9feefd,0x5d3b1b85,0x5bd1bd0e,0x5a640bc0,0x58f24073,0x577c949d,0x56034253,0x54868439,0x5306957c,0x5183b1c6,0x4ffe1539,0x4e75fc63,0x4ceba432,0x4b5f49f2,0x49d12b3b,0x484185ee,0x46b09827,0x451ea035,0x438bdc92,0x41f88bd6,0x4064ecb0,0x3ed13ddb,0x3d3dbe13,0x3baaac0f,0x3a184673,0x3886cbca,0x36f67a79,0x356790b7,0x33da4c84,0x324eeb9d,0x30c5ab76,0x2f3ec92c,0x2dba817f,0x2c3910c9,0x2abab2ef,0x293fa360,0x27c81d05,0x26545a3a,0x24e494c7,0x237905d5,0x2211e5e3,0x20af6cc3,0x1f51d18b,0x1df94a92,0x1ca60d62,0x1b584eb6,0x1a10426b,0x18ce1b7e,0x17920c00,0x165c4510,0x152cf6d2,0x1404506b,0x12e27ff5,0x11c7b27c,0x10b413f1,0x0fa7cf2d,0x0ea30ddf,0x0da5f88f,0x0cb0b692,0x0bc36e07,0x0ade43cc,0x0a015b82,0x092cd77c,0x0860d8c2,0x079d7f08,0x06e2e8aa,0x063132a9,0x058878a2,0x04e8d4cf,0x04526000,0x03c53195,0x03415f82,0x02c6fe42,0x025620da,0x01eed8d5,0x01913640,0x013d47a9,0x00f31a1b,0x00b2b91c,0x007c2eb0,0x004f834f,0x002cbdeb,0x0013e3eb,0x0004f92c,0x00000000"
+    data = data.split(",")
+    hann256_fixed = [int(num, 0) for num in data]  # consider "0x"
+    hann256_floating = fi.fi(
+        hann256_fixed, Signed=True, TotalLen=32, FracLen=31, Format=0, ReturnVal="Dec"
     )
 
-    fig, ax = plt.subplots(figsize=(6.5, 5))
+    # convert floating point to fixed point, Q 1.31, data is hanning window
+    hann256_floating = 0.5 * (1 - np.cos((2 * np.pi * np.arange(0, 256)) / 255))
+    hann256_fixed = fi(
+        hann256_floating.tolist(),
+        Signed=False,
+        TotalLen=32,
+        FracLen=31,
+        Format=1,
+        ReturnVal="Hex",
+    ).split(",")
 
-    def pchip_interpolation():
-        # pchip_interpolate
-        x_observed = np.linspace(0.0, 10.0, 11)
-        y_observed = np.sin(x_observed)
-        x = np.linspace(min(x_observed), max(x_observed), num=100)
-        y = pchip_interpolate(x_observed, y_observed, x)
-        ax.plot(x_observed, y_observed, "o", label="observation")
-        ax.plot(x, y, label="pchip interpolation")
 
-    def Hermite_spline_interpolation():
-        # cubic Hermite and spline interpolation methods
-        x = np.arange(10)
-        y = np.sin(x)
-        cs = CubicSpline(x, y)
-        xs = np.arange(-0.5, 9.6, 0.1)
-        ax.plot(x, y, "o", label="data")  # datapoint
-        ax.plot(xs, np.sin(xs), label="true")  # origin
-        ax.plot(xs, cs(xs), label="S")  # y
-        ax.plot(xs, cs(xs, 1), label="S'")  # delta_y
-        ax.plot(xs, cs(xs, 2), label="S''")  # delta_delta_y
-        ax.plot(xs, cs(xs, 3), label="S'''")  # delta_delta_delta_y
+def iir_filter_fixed_to_floating_format_plot():
+    """Test for iir filter in floating format"""
+    ploter = FilterAnalyzePlot(sampling_freq=48000)
 
-    pchip_interpolation()
-    # Hermite_spline_interpolation()
-    plt.legend()
+    # custom filter, Q 2.30, highpass
+    alpha = [0x40000000, 0x84BCADBC, 0x3B6EA04E]
+    beta = [0x3DAC7CA5, 0x84A706B8, 0x3DAC7CA5]
+
+    a_local = np.array(
+        fi(Values=alpha, Signed=1, TotalLen=32, FracLen=30, Format=0, ReturnVal="Dec")
+    )
+    b_local = np.array(
+        fi(Values=beta, Signed=1, TotalLen=32, FracLen=30, Format=0, ReturnVal="Dec")
+    )
+
+    ploter.filters = b_local, a_local
+
+    # Plot Frequency response
+    ploter.plot(type=["freq", "phase", "pole"])
+
+
+def iir_filter_floating_to_fixed_format_print():
+    from src import peaking
+    fs = 48000
+    fc_band = np.array([250, 2000, 8000])
+    for fc in fc_band:
+        filter = peaking(Wn=2 * fc / fs, dBgain=-6, Q=4)
+        filter = np.array(filter).tolist()
+        cvt_float2fixed(filter)
+
+
+def iir_filter_fixed_to_floating_format_process():
+    coeff_freq_domain = [
+        0x5A9DF7AC,
+        0x4026E73D,
+        0x2D6A8670,
+        0x2026F310,
+        0x16C310E4,
+        0x101D3F2E,
+        0x0B68737A,
+        0x08138562,
+        0x05B7B15B,
+        0x040C3714,
+        0x02DD958B,
+        0x0207567B,
+        0x016FA9BB,
+        0x01044915,
+        0x00B8449D,
+        0x008273A7,
+        0x005C5A50,
+        0x0041617A,
+        0x002E493A,
+        0x0020C49C,
+        0x001732AE,
+        0x00106C44,
+        0x000BA064,
+        0x00083B20,
+        0x0005D3BB,
+        0x00042011,
+        0x0002EBA3,
+        0x0002114A,
+        0x000176B5,
+        0x00010946,
+        0x0000BBCD,
+        0x000084F4,
+        0x00005E20,
+        0x000042A3,
+        0x00002F2D,
+        0x00002166,
+        0x000017A5,
+        0x000010BD,
+        0x00000BDA,
+        0x00000864,
+        0x000005F1,
+        0x00000435,
+        0x000002FA,
+        0x0000021C,
+        0x0000017E,
+        0x0000010F,
+        0x000000C0,
+        0x00000088,
+        0x00000060,
+        0x00000044,
+        0x00000031,
+        0x00000023,
+        0x00000019,
+        0x00000012,
+        0x0000000D,
+        0x00000009,
+        0x00000007,
+        0x00000005,
+        0x00000004,
+        0x00000003,
+        0x00000002,
+        0x00000002,
+        0x00000001,
+        0x00000000,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
+    # Q 1.31, Lowpass
+    coeff_freq_domain = fi(coeff_freq_domain, 0, 32, 31, 0, "Dec")
+
+    infile_path = "./test/data/wav/White Noise.wav"
+    outfile_path = "./test/result/wav/White Noise_lowpass_floating_cvt2binary32.wav"
+    fs, data = wav.read(infile_path)
+
+    wave_processor = WaveProcessor(wavfile_path=infile_path)
+    wave_processor.sampleing_freq = fs
+    for coeff in coeff_freq_domain:
+        wave_processor.freqfilters = coeff
+    wave_processor.run(savefile_path=outfile_path)
+
+
+def scale_logarithmic():
+    # frequency = np.arange(20, 22051, 1)
+    f0 = 20
+    fs = 44100
+    f0_log = np.log10(f0)
+    frequency_log = np.arange(f0_log, np.log10(fs / 2), 0.1)
+    frequency = np.power(10, frequency_log)
+    # frequency = 20*10**(np.arange(0, 10, 0.1))
+    ideal_frequency = np.array(
+        (
+            20,
+            25,
+            31.5,
+            40,
+            50,
+            63,
+            80,
+            100,
+            125,
+            160,
+            200,
+            250,
+            315,
+            400,
+            500,
+            630,
+            800,
+            1000,
+            1250,
+            1600,
+            2000,
+            2500,
+            3150,
+            4000,
+            5000,
+            6300,
+            8000,
+            10000,
+            12500,
+            16000,
+            20000,
+        )
+    )
+    fig = plt.figure(figsize=(8, 6))
+
+    axes = [0] * 3
+    axes[0] = fig.add_subplot(2, 1, 1)
+    axes[1] = fig.add_subplot(2, 2, 3)
+    axes[2] = fig.add_subplot(2, 2, 4)
+
+    axes[0].plot(frequency, ".")
+    axes[0].plot(ideal_frequency, "*")
+
+    axes[1].plot(frequency, ".")
+    axes[2].plot(ideal_frequency, "*")
+
     plt.show()
 
 
-def test_hilbert_from_scratch_time_domain():
-    """Test hilbert transform from time-domain signal
+def paper_plot_cascade_sheving_filter():
+    """ Cascade biquad 2nd order sheving filter
+        Paper.
+        SchultzHahnSpors_2020_ShelvingFiltersAdjustableTransitionBand_Paper.pdf
     """
-    N = 32
-    f = 1
-    dt = 1.0 / N
-    y = []
-    for n in range(N):
-        x = 2 * math.pi * f * dt * n
-        y.append(2 * math.sin(x))
-    z1 = hilbert_from_scratch(y)
-    z2 = hilbert(y)
-    z3 = scipy.signal.hilbert(y)
+    from scipy.signal import (
+        bilinear_zpk,
+        unit_impulse,
+        sos2zpk,
+        zpk2sos,
+        sosfilt,
+        sosfreqz,
+    )
+    from matplotlib.ticker import MultipleLocator
+    from src import (
+        low_shelving_2nd_cascade,
+        shelving_filter_parameters,
+        db,
+        set_rcparams,
+        set_outdir,
+        matchedz_zpk,
+    )
 
-    print(" n     y fromscratch scipy")
-    for n in range(N):
-        print(
-            "{:2d} {:+5.2f} {:+10.2f} {:+5.2f} {:+5.2f}".format(
-                n, y[n], z1[n], z2[n], z3[n]
-            )
+    set_rcparams()
+
+    fs = 48000
+    fc = 1000
+    w0 = 1
+
+    # Frequency-domain evaluation
+    wmin, wmax, num_w = 2 ** -9.5, 2 ** 4.5, 1000
+    w = np.logspace(np.log10(wmin), np.log10(wmax), num=num_w)
+
+    fmin, fmax, num_f = 10, 22000, 1000
+    f = np.logspace(np.log10(fmin), np.log10(fmax), num=num_f)
+
+    # Time-domain evaluation
+    ws = 2 * np.pi * fs
+    s2z = matchedz_zpk
+    # s2z = bilinear_zpk
+
+    fig, ax = plt.subplots(figsize=(13, 7), ncols=2, gridspec_kw={"wspace": 0.25})
+    flim = fmin, fmax
+
+    fticks = fc * 2.0 ** np.arange(-8, 4, 2)
+    fticklabels = ["7.8", "31.3", "125", "500", "2k", "8k"]
+
+    fticks = 1000 * 2.0 ** np.arange(-6, 5, 1)
+    fticklabels = [
+        "15.",
+        "31.",
+        "62.",
+        "125",
+        "250",
+        "500",
+        "1k",
+        "2k",
+        "4k",
+        "8k",
+        "16k",
+    ]
+
+    print(len(fticklabels), fticks)
+
+    _Q = 1 / sqrt(2)
+
+    biquad_per_octave = 1
+
+    # _slope = -10 * np.log10(2)
+    _slope = -10 * np.log10(2)
+    _BWd = (
+        None  # biquad_per_octave * Bwd / octave, expect 0db frequency fc/BWd = 250 Hz
+    )
+    _G_desire = 6
+
+    n_list = np.arange(-3, 10, dtype=float)
+    n_list = [pow(2, n) for n in n_list]
+    n_list = list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    n_desire = []
+
+    for n in n_list:
+
+        print("-" * 10)
+        print(n)
+        print("-" * 10)
+        Q = _Q
+        BWd = _BWd
+        G_desire = _G_desire
+        slope = _slope * n
+
+        # Analog filter
+        H = np.zeros(num_w, dtype="complex")
+        biquad_per_octave, num_biquad, Gb, G = shelving_filter_parameters(
+            biquad_per_octave=biquad_per_octave, Gd=G_desire, slope=slope, BWd=BWd
         )
 
-    t = np.arange(0, N)
+        if _G_desire is None:
+            _G_desire = BWd * slope
+        if slope is None:
+            slope = G_desire / BWd
 
-    y_fft = fft(y)
-    y_fft = y_fft[: len(y_fft) // 2 + 1]
+        sos_sdomain = low_shelving_2nd_cascade(
+            w0, Gb, num_biquad, biquad_per_octave, Q=Q
+        )
+        zs, ps, ks = sos2zpk(sos_sdomain)
 
-    z1_fft = fft(z1)
-    z2_fft = fft(z2)
-    z3_fft = fft(z3)
+        # Digital filter s_domain * 2*pi*fc/fs
+        zpk = s2z(zs * 2 * np.pi * fc, ps * 2 * np.pi * fc, ks, fs=fs)
+        sos_zdomain = zpk2sos(*zpk)
 
-    z1_fft = z1_fft[: len(z1_fft) // 2 + 1]
-    z2_fft = z2_fft[: len(z2_fft) // 2 + 1]
-    z3_fft = z3_fft[: len(z3_fft) // 2 + 1]
+        # print(sos_zdomain)
 
-    fig, ax = plt.subplots(nrows=3)
-    ax[0].plot(t, y, label="y")
-    # ax[0].plot(t, z1.imag, label='z1')
-    ax[0].plot(t, z2, label="z2")
-    # ax[0].plot(t, z3, label='z3')
+        w, H = sosfreqz(sos_zdomain, worN=f, fs=fs)
 
-    t = t[: len(t) // 2 + 1]
-    ax[1].plot(t, 20 * np.log10(np.abs(y_fft)), label="y")
-    # ax[1].plot(t, np.abs(z1_fft), label='z1')
-    ax[1].plot(t, 20 * np.log10(np.abs(z2_fft)), label="z2")
-    # ax[1].plot(t, np.abs(z3_fft), label='z3')
+        # Plot
+        def plot():
+            # kw = dict(c='cornflowerblue', lw=2, alpha=1, label='S {:+0.2f}'.format(abs(slope)/3))
+            kw = dict(c="cornflowerblue", lw=2, alpha=1)
 
-    ax[2].plot(t, np.angle(y_fft, deg=True), label="y")
-    # ax[2].plot(t, np.angle(z1_fft, deg=True), label='z1')
-    ax[2].plot(t, np.angle(z2_fft, deg=True), label="z2")
-    # ax[2].plot(t, np.angle(z3_fft, deg=True), label='z3')
+            # frequency response
+
+            # SLOPE (dB/dec) = ∆dB / (log10W2 – log10W1) = ∆dB / log10 (W2/W1);
+            # ∆dB = Slope (dB/dec) * log10(W2/W1);
+            # ∆dB = -20 (dB/dec) * log10(W2/W1)
+            # idx_h0 = np.where(db(H) < 9)[0][0] # -3dB
+            # # idx_h1 = idx_h0+1
+            # idx_h1 = np.where(db(H) < 10e-2)[0][0]
+            # f0 = f[idx_h0]
+            # h0 = db(H)[idx_h0]
+            # f1 = f[idx_h1]
+            # h1 = db(H)[idx_h1]
+
+            # print((h0, f0), (h1, f1))
+            # print(abs(h0-h1)/log2(f1/f0))
+
+            ax[0].semilogx(f, db(H), **kw)
+            ax[1].semilogx(f, np.angle(H, deg=True), **kw)
+
+        # plot()
+        # if _G_desire > 0:
+        #     if db(H).max() < _G_desire+3 and db(H)[0] > _G_desire-3:
+        #         n_desire.append(log2(n))
+        #         plot()
+
+        # elif _G_desire < 0:
+        #     if db(H).min() > _G_desire-3 and db(H)[0] < _G_desire+3:
+        #         n_desire.append(log2(n))
+        #         plot()
+
+    # Gmin, Gmax = plt.ylim()
+
+    from src import (
+        shelf,
+        peaking,
+        bandpass,
+        lowpass,
+        notch,
+        allpass,
+        shelf,
+    )
+    from scipy.signal import freqz
+
+    btype = "low"
+    ftype = "half", "outer", "inner"
+    slide = 1
+
+    boost = _G_desire
+
+    frame_size = 4096 * 8
+    Wn = 2 * fc / fs  # 2 * pi * normalized_frequency
+
+    fc = 1000 * 2 ** np.arange(-6, 5, dtype=float)
+    Wn = 2 * fc / fs
+    # b, a = peaking(Wn=wn, dBgain=boost, Q=1/sqrt(2), type='constantq',
+    #                 analog=False, output='ba')
+    # b, a = shelf(Wn=wn, dBgain=boost, S=1, btype=btype, ftype=ftype[0],
+    #             analog=False, output='ba')
+    # w, h = freqz(b, a, frame_size)
+    # freq=w * fs * 1.0 / (2 * np.pi)
+
+    for wn in Wn:
+        print(wn)
+        # b, a = shelf(Wn=wn, dBgain=g, Q=1/sqrt(2), btype=btype, ftype=ftype[0],
+        #             analog=False, output='ba')
+        b, a = lowpass(Wn=wn, Q=1 / sqrt(2), analog=False, output="ba")
+
+        w, h = freqz(b, a, frame_size)
+        freq = w * fs * 1.0 / (2 * np.pi)
+
+        # ax[0].plot(freq, 20 * log10(abs(h)), label='Previous', color='orange')
+        ax[0].semilogx(freq, 20 * log10(abs(h)))
+        ax[1].semilogx(freq, np.angle(h, deg=True))
+
+    ax[0].plot(freq, 20 * log10(abs(h)), color="orange", label="Previous")
+    ax[1].plot(freq, np.angle(h, deg=True), color="orange", label="Previous")
+
+    # decorations
+    ax[0].set_xlim(flim)
+    # plt.ylim(Gmin, Gmax)
+    ax[0].set_xticks(fticks)
+    ax[0].set_xticklabels(fticklabels)
+    ax[0].minorticks_off()
+    ax[0].grid(True)
+    ax[0].set_xlabel("Frequency in Hz")
+    ax[0].set_ylabel("Level in dB")
+
+    ax[1].set_xlim(flim)
+    # ax[1].set_ylim(phimin, phimax)
+    ax[1].set_xticks(fticks)
+    ax[1].set_xticklabels(fticklabels)
+    ax[1].minorticks_off()
+    # ax[1].yaxis.set_major_locator(MultipleLocator(15))
+    # ax[1].yaxis.set_minor_locator(MultipleLocator(5))
+    ax[1].grid(True)
+    ax[1].set_xlabel("Frequency in Hz")
+    ax[1].set_ylabel(r"Phase in degree")
+    # ax[2].axis([0.76, 1.04, -0.14, 0.14])
+    # ax[2].grid(True)
+    # ax[2].set_aspect('equal')
+    # ax[2].set_ylabel(r'$\Im (z)$')
+    # ax[2].set_xlabel(r'$\Re (z)$')
+    # ax[2].xaxis.set_major_locator(MultipleLocator(0.1))
+    # ax[2].yaxis.set_major_locator(MultipleLocator(0.1))
+
+    # ax[0].axvline(x=fc, color='r', label='cut-off frequency', linestyle='--', lw=2)
+    # ax[0].axvline(x=fc, color='r', linestyle='--', lw=2)
+    # ax[0].legend(loc='upper right', prop=dict(weight='bold'))
+    # ax[1].axvline(x=fc, color='r', linestyle='--', lw=2)
+    # ax[1].legend(loc='upper right', prop=dict(weight='bold'))
+
+    plt.get_current_fig_manager().full_screen_toggle()
 
     plt.show()
 
 
-def test_hilbert_from_scratch_frequency_response():
-    """Test hilbert transform from frequency-domain amplitude
-        Reference. Understanding Digital Signal Processing 441 page
+def paper_plot_sheving_filter_digital():
+    """Filter design using biquad filter cookbook
+        in digial domain
     """
-    N = 32
-    f = np.arange(1, 5)
-    dt = 1.0 / N
-    y = []
-    for n in range(N):
-        y_one = sum([math.sin(2 * math.pi * freq * dt * n) / len(f) for freq in f])
-        y.append(y_one)
-    y_fft = np.fft.fft(y)
-    data_fft = y_fft
+    from src import shelf
+    from scipy.signal import freqz
 
-    # Method 1. iFFT -> disgard imag -> hilbert -> FFT
-    y_fft_real_HT = data_fft.copy() * 2.0
-    y_fft_real_HT[len(y_fft_real_HT) // 2 + 1 :] = 0
-    y_fft_real_HT[0] /= 2
-    y_fft_real_HT[len(y_fft_real_HT) // 2] /= 2
+    """ Basic 2nd order sheving Filter """
+    filter_type = {"low_pass", "high_pass", "all_pass", "bandpass", "peaking", "shelf"}
 
-    y_HT = np.fft.ifft(y_fft_real_HT)
+    test = "shelf"
 
-    # y_HT = scipy.signal.hilbert(y_HT.real)
-    y_fft_HT = np.fft.fft(y_HT)
+    btype = "low"
+    ftype = "half"
+    slide = 1
 
-    # Method 2. irFFT -> hilbert -> rFFT
-    y_HT2 = np.fft.irfft(y_fft_real_HT[: len(data_fft // 2 + 1)], n=len(data_fft))
-    # y_HT2 = scipy.signal.hilbert(y_HT2)
-    y_fft_HT2 = np.fft.rfft(y_HT2)
+    fc = 1000
+    fs = 44100
+    frame_size = 1024
 
-    x = np.arange(N)
-    fig, (ax0, ax1, ax2) = plt.subplots(nrows=3)
-    ax0.plot(np.abs(data_fft), "*", label="fft signal")
-    ax0.plot(np.abs(y_fft_HT), "x", label="fft signal_Hilbert Transform")
-    ax0.plot(np.abs(y_fft_HT2), "s", label="rfft signal_Hilbert Transform")
-    ax0.legend()
+    wn = fc / fs / 2
 
-    ax1.plot(np.angle(data_fft, deg=True))
-    ax1.plot(np.angle(y_fft_HT, deg=True))
-    ax1.plot(np.angle(y_fft_HT2, deg=True))
-    fig.tight_layout()
+    fig = plt.figure(figsize=(14, 7))
+    # ax = fig.subplots(ncols=1, nrows=2)
 
-    ax2.plot(y, "*", label="fft signal")
-    ax2.plot(y_HT.imag, "o", label="fft signal_Hilbert Transform")
-    # ax2.plot(y_HT2, "s", label='rfft signal_Hilbert Transform')
-    ax2.legend()
-    plt.show()
+    for boost in range(-24, 0, 3):
+        b, a = shelf(
+            Wn=wn,
+            dBgain=boost,
+            S=slide,
+            btype=btype,
+            ftype=ftype,
+            analog=False,
+            output="ba",
+        )
+        w, h = freqz(b, a, frame_size)
+        freq = w * fs * 1.0 / (2 * np.pi)
 
+        angle = 180 * np.angle(h) / pi  # Convert to degrees
 
-def example_hilbert_signal():
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.signal import hilbert, chirp
+        plt.plot(freq, 20 * log10(abs(h)), "r")
 
-    duration = 1.0
-    fs = 400.0
-    samples = int(fs * duration)
-    t = np.arange(samples) / fs
+    for boost in range(0, 25, 3):
+        b, a = shelf(
+            Wn=wn,
+            dBgain=boost,
+            S=slide,
+            btype=btype,
+            ftype=ftype,
+            analog=False,
+            output="ba",
+        )
+        w, h = freqz(b, a, frame_size)
+        freq = w * fs * 1.0 / (2 * np.pi)
 
-    # We create a chirp of which the frequency increases from 20 Hz to 100 Hz and
-    # apply an amplitude modulation.
+        angle = 180 * np.angle(h) / pi  # Convert to degrees
 
-    signal = chirp(t, 20.0, t[-1], 100.0)
-    signal *= 1.0 + 0.5 * np.sin(2.0 * np.pi * 3.0 * t)
+        plt.plot(freq, 20 * log10(abs(h)), "b")
+        # ax[0].plot(freq, 20 * log10(abs(h)), 'b')
+        # ax[1].plot(freq, angle, 'r')
 
-    # The amplitude envelope is given by magnitude of the analytic signal. The
-    # instantaneous frequency can be obtained by differentiating the
-    # instantaneous phase in respect to time. The instantaneous phase corresponds
-    # to the phase angle of the analytic signal.
+    plt.xscale("log")
+    plt.title(f"shelving filter, Frequency Response")
+    plt.xlim(0.1, 1000)
+    plt.xticks(
+        [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
+        ["10", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"],
+    )
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("Amplitude [dB]")
+    plt.yticks(range(-24, 25, 3))
+    plt.margins(0, 0.1)
+    plt.grid(True, color="0.7", linestyle="-", which="major", axis="both")
+    plt.grid(True, color="0.9", linestyle="-", which="minor", axis="both")
 
-    analytic_signal = hilbert(signal)
-    amplitude_envelope = np.abs(analytic_signal)
-    instantaneous_phase = np.unwrap(np.angle(analytic_signal))
-    instantaneous_frequency = np.diff(instantaneous_phase) / (2.0 * np.pi) * fs
+    # plt.xlim(0.1, 1000)
+    # ax[0].xlabel('Frequency [Hz]')
+    # ax[0].ylabel('Amplitude [dB]')
+    # ax[0].yticks(range(-24, 25, 3))
+    # ax[0].margins(0, 0.1)
+    # ax[0].grid(True, color='0.7', linestyle='-', which='major', axis='both')
+    # ax[0].grid(True, color='0.9', linestyle='-', which='minor', axis='both')
 
-    fig, (ax0, ax1) = plt.subplots(nrows=2)
-    ax0.plot(t, signal, label="signal")
-    ax0.plot(t, amplitude_envelope, label="envelope")
-    ax0.set_xlabel("time in seconds")
-    ax0.legend()
-    ax1.plot(t[1:], instantaneous_frequency)
-    ax1.set_xlabel("time in seconds")
-    ax1.set_ylim(0.0, 120.0)
-    fig.tight_layout()
-    plt.show()
+    # plt.xlim(0.1, 1000)
+    # ax[1].xlabel('Frequency [Hz]')
+    # ax[1].ylabel('Amplitude [dB]')
+    # ax[0].yticks(range(-24, 25, 3))
+    # ax[1].margins(0, 0.1)
+    # ax[1].grid(True, color='0.7', linestyle='-', which='major', axis='both')
+    # ax[1].grid(True, color='0.9', linestyle='-', which='minor', axis='both')
 
-
-def example_hilbert_transform():
-    t = np.linspace(0, 6, 1000)
-    f = 1000
-    w0 = 2 * np.pi * f
-    y = np.cos(w0 * t)
-    axis = -1
-    N = y.shape[axis]
-    y_analytic = scipy.signal.hilbert(y)
-    y_hilbert = y_analytic.imag
-
-    fft_y = np.fft.fft(y)
-    fft_hilbert = np.fft.fft(y_hilbert)
-    fft_hilbert = np.fft.rfft(y_hilbert)
-    fft_analytic = np.fft.fft(y_analytic)
-
-    t = np.linspace(0, 6, 1000)
-    f = 3000
-    w0 = -2 * np.pi * f
-    y = np.cos(w0 * t)
-    y_effect = y - 1j * np.sin(w0 * t)
-
-    fft_y = np.fft.fft(y)
-    fft_effect = np.fft.fft(y_effect)
-
-    fig, ax = plt.subplots(nrows=2, ncols=2)
-
-    ax[0][0].plot(t, fft_y, label="amplitude")
-    ax[1][0].plot(t, fft_effect, label="amplitude")
-
-    ax[0][1].plot(t, np.angle(fft_y, deg=True), label="phase")
-    ax[1][1].plot(t, np.angle(fft_effect, deg=True), label="phase")
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(projection='3d')
-
-    # ax.plot(t, np.ones_like(t)*2, y_analytic.imag)
-    # ax.plot(t, y_analytic.real, y_analytic.imag)
-    # ax.plot(t, y_analytic.real, np.ones_like(t)*(-2))
-
-    # ax.set_xlim(-1, max(t)+1)
-    # ax.set_ylim(-2, 2)
-    # ax.set_zlim(-2, 2)
-
-    # _, (ax0, ax1) = plt.add_subplots(nrows=2, ncols=2)
-
-    # ax0[0].plot(t, y, "*", label='y')
-    # ax0[0].plot(t, y_analytic, "*", label='analytic signal')
-
-    # ax1[0].plot(t, y, label='y')
-    # ax1[0].plot(t, y_analytic.imag, label='analytic signal')
-
-    # ax0[1].plot(t, np.abs(fft_y), "*", label='y')
-    # ax0[1].plot(t, np.abs(fft_analytic), "*", label='analytic signal')
-    # ax0[1].plot(np.abs(fft_hilbert), "*", label='hilbert transform')
-
-    # ax1[1].plot(np.angle(fft_y), label='y')
-    # ax1[1].plot(t, np.angle(fft_analytic), label='analytic signal')
-    # ax1[1].plot(np.angle(fft_hilbert), label='hilbert transform')
-
-    # for _ax0, _ax1 in zip(ax0, ax1):
-    #     for ax in (_ax0, _ax1):
-    #         ax.legend()
+    # outdir=''
+    # name=f'{test}_{btype}_gain_-24_24'
+    # plt.savefig(f'{outdir}/{name}_S_{slide}.pdf')
 
     plt.show()
 
 
-def test_even_odd_cross_matrix_1d():
-    """Test (5, 3, 1) <-> (5, 2) in 1D
-        (5, 3, 1) * (5, 1, 2) = (5, 3, 2) 
+def paper_plot_sheving_filter_analog():
+    """Filter design using biquad filter cookbook
+        in analog domain
     """
-    x = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    y = np.power(x, 2)
-    print(f"array {x}, {y}")
+    from src import peaking
+    from scipy.signal import freqs
 
-    z = np.append(x, y, axis=-1)
-    print(f"append matrix {z}")
+    for ftype in ("half", "constantq"):
+        plt.figure()
+        for boost in range(-24, 0, 3):
+            b, a = peaking(10, dBgain=boost, Q=sqrt(2), type=ftype, analog=True)
+            w, h = freqs(b, a, 10000)
+            plt.plot(w, 20 * log10(abs(h)), "r", alpha=0.5)
 
-    z = z.reshape(len(z) // len(x), len(x)).transpose().flatten()
-    print(f"cross matrix {z}")
+        for boost in range(0, 25, 3):
+            b, a = peaking(10, dBgain=boost, Q=sqrt(2), type=ftype, analog=True)
+            w, h = freqs(b, a, 10000)
+            plt.plot(w, 20 * log10(abs(h)), "b", alpha=0.5)
 
-    z_2 = np.array([x, y]).flatten("F")
-    print(f"cross matrix 2 {z_2}")
-
-    z_3 = np.array([x, y]).reshape((len(x) + len(y),), order="F")
-    print(f"cross matrix 3 {z_3}")
-
-
-def test_even_odd_cross_matrix_2d():
-    """Test (5, 3, 1) <-> (5, 2) in 2D
-        (5, 3, 1) * (5, 1, 2) = (5, 3, 2) 
-    """
-    print("\nBasic Test")
-    x = np.array([np.arange(0, 16) for _ in range(32)])
-    x = np.expand_dims(x, axis=-1)
-    y = np.ones(shape=(32, 3))
-    y[:, 0] = 0
-    y[:, 2] = 2
-    y = np.expand_dims(y, axis=1)
-    z = np.matmul(x, y)
-    print(f"{x.shape} @ {y.shape} = {z.shape}")
-    # for i in range(16): print(f'{x[0, i, :]} * {y[i, :]} = {z[0, i, :]}')
-    z = z.reshape((z.shape[0], z.shape[1] * z.shape[2]))
-    print(z[0])
-
-    print("\nTest graphic equalizer case")
-    y = np.array([np.zeros((32,)), np.ones((32,)), np.ones((32,)) * 2]).transpose()
-    y = np.expand_dims(y, axis=1)
-    z = np.matmul(x, y)
-    print(f"{x.shape} @ {y.shape} = {z.shape}")
-
-    # for i in range(16): print(f'{x[0, i, :]} * {y[i, :]} = {z[0, i, :]}')
-
-    z = z.reshape((z.shape[0], z.shape[1] * z.shape[2]))
-    z = np.append(z, np.ones((z.shape[0], 1)) * 1000, axis=1)
-    print(z[0])
+        plt.xscale("log")
+        plt.title(f'Peaking filter, "{ftype}" frequency response')
+        plt.xlim(0.1, 1000)
+        plt.xlabel("Frequency [radians / second]")
+        plt.ylabel("Amplitude [dB]")
+        plt.yticks(range(-24, 25, 3))
+        plt.margins(0, 0.1)
+        plt.grid(True, color="0.7", linestyle="-", which="major", axis="both")
+        plt.grid(True, color="0.9", linestyle="-", which="minor", axis="both")
+        plt.show()
 
 
 def paper_all_pass_filter():
     """paper. frequency-warped signal preprocessing for audio application
         - 7p. 2.1 Allpass filter chain
+        
+        fig.add_subplot(total rows, total cols, index)
+        index = n_row * n_col + n_col
     """
     import scipy.signal as signal
+
     sampling_rate = 44100
     dt = 1 / sampling_rate
     w = np.linspace(0, np.pi, sampling_rate // 2, endpoint=True)
@@ -456,6 +721,7 @@ def paper_all_pass_filter():
         # phase normalize
         phi /= phi[np.where(np.abs(phi) == np.max(np.abs(phi)))[0][0]]
         axes[0].plot(f, phi, ".", label=f"lambda={_lambda}")
+
         # group delay
         w, gd = signal.group_delay((b, a), w=sampling_rate // 2)
         axes[1].plot(f, gd, "*", label=f"lambda={_lambda}")
@@ -468,34 +734,274 @@ def paper_all_pass_filter():
     axes[0].set_xlim(0, sampling_rate // 2)
     axes[0].legend()
     axes[0].grid(True)
+    axes[0].set_title("phase normalize")
 
     axes[1].set_ylim(0, 7)
     axes[1].set_xlim(0, sampling_rate // 2)
     axes[1].legend()
     axes[1].grid(True)
+    axes[1].set_title("group delay")
 
     axes[2].set_yticks(np.arange(0, 2.5, 0.5))
     axes[2].set_xlim(0, sampling_rate // 2)
     axes[2].legend()
     axes[2].grid(True)
+    axes[2].set_title("amplitude")
 
     # plt.xscale("log")
     plt.show()
 
-if __name__ == "__main__":
-    """ fi command example """
-    # example_fi()
-    """ Non-linear, linear interpolation test """
-    # example_2ndinterpolation()
-    """ Hilbert Transform test """
-    # test_hilbert_from_scratch_time_domain()
-    # test_hilbert_from_scratch_frequency_response()
-    # example_hilbert_signal()
-    # example_hilbert_transform()
-    """ Matrix Transform test"""
-    # test_even_odd_cross_matrix_1d()
-    # test_even_odd_cross_matrix_2d()
 
-    """ frequency wrapping"""
-    # -ing
-    paper_all_pass_filter()
+def generator_test_vector_grahpical_equalizer():
+    sampling_frequency = 44100
+
+    # cuf-off freuqency case 1
+    cutoff_frequency = np.array(
+        (
+            20,
+            25,
+            31.5,
+            40,
+            50,
+            63,
+            80,
+            100,
+            125,
+            160,
+            200,
+            250,
+            315,
+            400,
+            500,
+            630,
+            800,
+            1000,
+            1250,
+            1600,
+            2000,
+            2500,
+            3150,
+            4000,
+            5000,
+            6300,
+            8000,
+            10000,
+            12500,
+            16000,
+            20000,
+        )
+    )
+
+    # gain
+    num_case = 5
+    test_gain_list = np.zeros(shape=(num_case, len(cutoff_frequency)))
+
+    # case 1
+    test_gain_list[0, :] = np.array(
+        [
+            12,
+            12,
+            10,
+            8,
+            4,
+            1,
+            0.5,
+            0,
+            0,
+            6,
+            6,
+            12,
+            6,
+            6,
+            -12,
+            12,
+            -12,
+            -12,
+            -12,
+            -12,
+            0,
+            0,
+            0,
+            0,
+            -3,
+            -6,
+            -9,
+            -12,
+            0,
+            0,
+            0,
+        ]
+    )
+
+    # case 2
+    test_gain_list[1, 0::2] = 12
+    test_gain_list[1, 1::2] = -12
+
+    # case 3
+    test_gain_list[2, np.where(cutoff_frequency == 2000)] = 12
+
+    # case 4
+    test_gain_list[3, :] = np.ones_like(cutoff_frequency) * 12
+
+    # case 5
+    test_gain_list[4, 0::3] = 0
+    test_gain_list[4, 1::3] = 0
+    test_gain_list[4, 2::3] = 12
+
+    # cut-off frequency case 2, cutoff frequency with bandwith
+    f_bandwidth = np.array(
+        [
+            2.3,
+            2.9,
+            3.6,
+            4.6,
+            5.8,
+            7.3,
+            9.3,
+            11.6,
+            14.5,
+            18.5,
+            23.0,
+            28.9,
+            36.5,
+            46.3,
+            57.9,
+            72.9,
+            92.6,
+            116,
+            145,
+            185,
+            232,
+            290,
+            365,
+            463,
+            579,
+            730,
+            926,
+            1158,
+            1447,
+            1853,
+            2316,
+        ]
+    )
+    f_upperband = np.array(
+        [
+            22.4,
+            28.2,
+            35.5,
+            44.7,
+            56.2,
+            70.8,
+            89.1,
+            112,
+            141,
+            178,
+            224,
+            282,
+            355,
+            447,
+            562,
+            708,
+            891,
+            1120,
+            1410,
+            1780,
+            2240,
+            2820,
+            3550,
+            4470,
+            5620,
+            7080,
+            8910,
+            11200,
+            14100,
+            17800,
+            22050,
+        ]
+    )
+    f_lowerband = np.zeros_like(f_upperband)
+    f_lowerband[0] = 17.5
+    f_lowerband[1:] = f_upperband[:-1]
+
+    cutoff_frequency_bandwidth = np.zeros((2, len(cutoff_frequency)))
+    cutoff_frequency_bandwidth[0, :] = np.append(10, f_upperband[:-1])
+    cutoff_frequency_bandwidth[1, :] = cutoff_frequency
+    cutoff_frequency_bandwidth = cutoff_frequency_bandwidth.reshape(
+        (cutoff_frequency_bandwidth.shape[0] * cutoff_frequency_bandwidth.shape[1],),
+        order="F",
+    )
+
+    test_gain_bandwidth_list = np.zeros(
+        shape=(num_case, cutoff_frequency_bandwidth.shape[0])
+    )
+
+    for id_test_gain, test_gain in enumerate(test_gain_list):
+        buf_test_gain = np.zeros((2, len(cutoff_frequency)))
+        buf_test_gain[0, :] = test_gain
+        buf_test_gain[1, :] = test_gain
+        buf_test_gain = buf_test_gain.reshape(
+            (buf_test_gain.shape[0] * buf_test_gain.shape[1],), order="F"
+        )
+        buf_test_gain[1:] = buf_test_gain[:-1]
+        buf_test_gain[0] = 0
+
+        test_gain_bandwidth_list[id_test_gain, :] = buf_test_gain[:]
+
+    cutoff_frequency = cutoff_frequency.tolist()
+    test_gain_list = test_gain_list.tolist()
+
+    cutoff_frequency_bandwidth = cutoff_frequency_bandwidth.tolist()
+    test_gain_bandwidth_list = test_gain_bandwidth_list.tolist()
+    
+    test_vector_graphical_equalizer = json.dumps(
+        {
+            "1": {
+                "sampling_frequency": sampling_frequency,
+                "cutoff_frequency": cutoff_frequency,
+                "test_gain": test_gain_list,
+            },
+            "2": {
+                "sampling_frequency": sampling_frequency,
+                "cutoff_frequency": cutoff_frequency_bandwidth,
+                "test_gain": test_gain_bandwidth_list,
+            },
+        },
+        indent=4,
+    )
+    with open("./test/json/test_graphical_equalizer.json", "w") as f:
+        f.write(test_vector_graphical_equalizer)
+
+
+if __name__ == "__main__":
+    """ Fi command example 
+        fixed point <-> floating format parameter test
+    """
+    # example_fi()
+    # iir_filter_fixed_to_floating_format_plot()
+    # iir_filter_floating_to_fixed_format_print()
+    # iir_filter_fixed_to_floating_format_process()
+    
+    """ Several types of filters and
+        Analysis analog and digital scope of pole and zeros in paper
+        
+        Reference.
+        Shelving Filter Cascade with Adjustable Transition Slope and Bandwidth, Schultz, Hahn, Spors 2020    
+    """
+    # paper_plot_cascade_sheving_filter()
+    # paper_plot_sheving_filter_digital()
+    # paper_plot_sheving_filter_analog()
+
+    """ Frequency wrapping in paper
+
+        Reference.
+        frequency-warped signal preprocessing for audio application, 2000
+    """
+    # paper_all_pass_filter()
+
+    """Logarithmic scale"""
+    # scale_logarithmic()
+
+    """Test vector for parallel strucuture equalizer called graphical equalizer"""
+    # generator_test_vector_grahpical_equalizer()
+
+    pass

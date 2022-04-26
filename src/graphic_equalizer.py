@@ -1,10 +1,13 @@
 """Parallel Graphical Equalizer
 
-    This is for parallel structure of filters.
+    This is for parallel structure of filters based the paper named
+        
+        Efficient Multi-Band Digital Audio Graphic Equalizer with Accurate Frequency Response Control.pdf
+
     The details of test is on test.py.
 
     The conversion function time to compute under the python is below,
-        
+            
         <function escape_zero_difference at 0x7fa26a39b550> 0.111 ms
         <function WaveProcessor.process_time_domain at 0x7fa26a39b1f0> 8.209 ms
 
@@ -18,36 +21,9 @@
         <function genPolePosition at 0x7fdd60e5b700> 0.126 ms
         <function genZeroPosition at 0x7fdd60e5b820> 32.792 ms
     ---
-    TODO LIST
-    [ ] genPolePosition:
-        [ ] 0. pole contains plus and minus, then which value?
-        [ ] 1. interpolation method research and arrangement
-                - linear, cubic, spline, etc.
-                - sinc interpolation
-                - reference. https://jaejunyoo.blogspot.com/2019/05/signal-processing-for-communications-9-1.html
-
-    [ ] genZeroPostition:
-        [ ] 0. Matrix M is not include imaginary, the paper said it is.
-        [ ] 0. Why the third b coffcient is not exist ?
-        [ ] 1. How to check the denominator is not correct? 
-            -> Make the example
-        [ ] 2. How to check the M is not correct?           
-            -> Make the example
-        [ ] 3. z = e^(-jwn) ?
-            - Do Raw code for scratch FFT function
-        [ ] 4. Normal LS design ?
-
-    [ ] arrange the concept:
-        - Why the windowing is applying two times which are in the time domain and after the ifft?
-        - The difference between linear phase and minimum phase filer design
-            - What is the Moore-Penrose pseudo-inverse, which is the concept for least-square solution?
-        - [TODO]reason of pole position ~~ genPolePosition   
-            - Fixed pole design         
-                - Reference. http://home.mit.bme.hu/~bank/parfilt/
-                - Reading papers
-                    - [Main     ] High Precision parallel Graphical Equalizer Design
-                    - [Reference][-ING] fixed-pole design, 2007
-                    - [Reference][-ING] freqeuency warped signal processing, 2000
+    TODO:
+    [ ] genZeroPostition
+        1. Checking function not to be correct for the denominator and the matrix M
 
     [ ] merge:
         - graphical equalizer to filter_analayze
@@ -58,20 +34,11 @@ import matplotlib.pyplot as plt
 from scipy.signal import hilbert
 from scipy.interpolate import pchip_interpolate
 
-if __name__.split(".")[0] == "lib":
-    from lib.config import *
-    from lib.util import plot_audacity_freq_response
-else:
-    from config import *
-    from util import plot_audacity_freq_response
+from .config import EPS, DEBUG, DEBUG_PRINT, DEBUG_PLOT
 
 if DEBUG:
-    if __name__.split(".")[0] == "lib":
-        from lib.debug.log import PRINTER
-        from lib.debug.util import check_time, print_func_time
-    else:
-        from debug.log import PRINTER
-        from debug.util import check_time, print_func_time
+    from .debugging import check_time, maker_logger
+PRINTER = maker_logger()
 
 
 @check_time
@@ -343,8 +310,11 @@ def genTargetResponse(
 @check_time
 def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
     """Generate pole position from cutoff frequency
+        Based on the paper, it is fixed-pole design.
+
         theta = 2*pi*fk/fs, for k= 1, 2, ..., N
         pole = e^{delta_theta_k/2}*e^{+-j*theta_k}
+
         * e^{delta_theta_k/2} means poles set at -3dB points
         delta_theta_1 = theta_2 - theta_1,
         delta_theta_k = (theta_k+1 - theta_k-1)/2,
@@ -353,13 +323,55 @@ def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
         ak,1 = (-p_k + p_k_conj) = -2|p_k|cos(theta_k)
         ak,2 = |p_k|^2
         * N is the number of cutoff frequency
+        
+        * Why use delta_theta?
+            Detail: 
+            The pole position relates to Quality Factor (Q), Damping factor.
+            This has the form of biquid filter design, which the simple way to design is 
+            a pole and the conjugate of this pole as below,
+                H(s) = g_1 /(s - p_0) + g_2 /(s - \bar{p_0})
+
+            Before desinging, it need to set a Quality factor(or damping factor) defined as below,
+                p_0 = \omega_0 + j*w_0 \triangleq e^{j*theta_0}= e^{\omega_0}*e^{-j*w_0},  
+                Q = w_0 / 2*\omega_0,
+                
+            In this case, it sets the \omega_0 to e^{delta_theta_k/2} where delta_theta_k is 
+            delta_theta_k/2 in logarithmic frequency(approximately 0.23 theta_k).
+                prof.
+                    f_k = 10^{f_0+nk}, f_0 is the first cutoff frequency, nk is the k-th order.
+                    f_{k+1} - f_{k-1} = 10^{f_0+nk+1} - 10^{f_0+nk-1}
+                                      = 10^{f_0+nk}(10^n-10^{-n})
+                    In this paper, n = 0.1 (n means the resolution of logarithmic frequency)
+                    f_{k+1} - f_{k-1} = 10^{f_0+nk}(10^{0.1}-10^{-0.1})
+                                      = 0.46*10^{f_0+nk}
+                                      = 0.46f_k , theta_k = 2*pi*f_k/fs
+                    delta_theta_k = 0.46 theta_k
+
+                    following above sequency in k=0, k=N, 
+                        e^{\omega_0} = e^{alpha_k*theta_k},
+                        alpha_k = 0.25, k=0
+                                  0.23, 0<k<N
+                                  0.20, k=N
+                    Finally, Q = w_k / 2*\omega_k = w_k / 2*alpha_k*theta_k = fs / 2*alpha_k 
+            Then, 
+                Q = omega_k / 2*alpha_k*theta_k ~= 2
+            The value means usually underdamping by refering Q for critical damping = 1/2. 
+
+        Reference. 
+            docs/img/pole_position.jpeg
+            docs/pdf/pole_position.pdf
+            Example for fixed-pole filter design. http://home.mit.bme.hu/~bank/parfilt/
+            Concept for fixed-pole. /docs/img/pole_position.jpeg
+            Concept for Quality Factor. https://ccrma.stanford.edu/~jos/filters/Quality_Factor_Q.html
     """
     theta = 2 * np.pi * cutoff_freq / sampling_freq
     delta_theta = np.zeros_like(theta)
     delta_theta[0] = theta[1] - theta[0]
     for id in range(1, len(theta) - 1):
         delta_theta[id] = (theta[id + 1] - theta[id - 1]) / 2
+
     delta_theta[-1] = theta[-1] - theta[-2]
+
     pole = np.exp(-1 * delta_theta / 2 - 1j * theta)
     a_k1 = -2 * np.abs(pole) * np.cos(theta)
     a_k2 = np.power(np.abs(pole), 2)
@@ -505,9 +517,7 @@ class GraphicalEqualizer(object):
         H(z) = d + sum_k=1^K (bk,0 + bk,1z-1) / (1 + ak,0z-1 + ak,1z-2)
     """
 
-    def __init__(
-        self, sampling_freq, cufoff_freq: np.array, gain: np.array, Q: np.array
-    ) -> None:
+    def __init__(self, sampling_freq, cufoff_freq: np.array, gain: np.array) -> None:
         self.sampling_freq = sampling_freq
         self.cufoff_freq = cufoff_freq
         self.gain = gain
@@ -521,6 +531,13 @@ class GraphicalEqualizer(object):
         self.d, self.b = genZeroPosition(
             self.sampling_freq, self.a, self.freq_target, self.H_target
         )
+        self._coeff = [
+            (self.b, self.a, self.d),
+        ]
+
+    @property
+    def coeff(self):
+        return self._coeff
 
     def write_to_file(self, save_path):
         with open(save_path, "w") as f:
@@ -535,8 +552,7 @@ class GraphicalEqualizer(object):
             f.write(f"{self.d}\n")
         print(f"Written to file, {save_path}")
 
-
-    def freqz(self, save_path="", full=False):
+    def freqz(self, save_path="", full=False, show=False):
         """Apply parallel filter to data
                          -jw                  -jw              -jwM
                 -jw   Bk(e  )    bk[0] + bk[1]e    + ... + bk[M]e
@@ -565,294 +581,56 @@ class GraphicalEqualizer(object):
         d = np.ones_like(h) * d
         h += d
 
-        plt.scatter(
-            w / (2 * np.pi) * fs,
-            20 * np.log10(np.abs(h)),
-            marker="*",
-            color="k",
-            label="simulation",
-        )
-
-        plt.scatter(
-            fc_target[: len(fc_target) // 2 + 1],
-            gain_target[: len(fc_target) // 2 + 1],
-            marker="o",
-            color="r",
-            label="target",
-        )
-
-        if full:
-            w_inv = np.linspace(np.pi, 2 * np.pi, num_step, endpoint=True)
-            zm = np.array(
-                [np.ones_like(w_inv), np.exp(-1j * w_inv), np.exp(-1j * 2 * w_inv)]
-            )
-            h_reflection = coeff @ zm
-            h_reflection = h_reflection.transpose(2, 0, 1)
-            h_reflection = h_reflection[:, :, 0] / h_reflection[:, :, 1]
-            h_reflection = np.sum(h_reflection, axis=-1)
-            d = np.ones_like(h_reflection) * d
-            h_reflection += d
-
+        if show:
             plt.scatter(
                 w / (2 * np.pi) * fs,
-                20 * np.log10(np.abs(np.flip(h_reflection))),
-                marker=".",
-                color="b",
-                label="simulation_inverse",
+                20 * np.log10(np.abs(h)),
+                marker="*",
+                color="k",
+                label="simulation",
             )
 
-        plt.xlim(1,)
-        plt.xscale("log")
-        plt.grid()
-        plt.legend()
+            plt.scatter(
+                fc_target[: len(fc_target) // 2 + 1],
+                gain_target[: len(fc_target) // 2 + 1],
+                marker="o",
+                color="r",
+                label="target",
+            )
 
-        if len(save_path)==0:
-            plt.show()
-        else:
-            plt.savefig(save_path)
-            plt.show()
+            if full:
+                w_inv = np.linspace(np.pi, 2 * np.pi, num_step, endpoint=True)
+                zm = np.array(
+                    [np.ones_like(w_inv), np.exp(-1j * w_inv), np.exp(-1j * 2 * w_inv)]
+                )
+                h_reflection = coeff @ zm
+                h_reflection = h_reflection.transpose(2, 0, 1)
+                h_reflection = h_reflection[:, :, 0] / h_reflection[:, :, 1]
+                h_reflection = np.sum(h_reflection, axis=-1)
+                d = np.ones_like(h_reflection) * d
+                h_reflection += d
 
+                plt.scatter(
+                    w / (2 * np.pi) * fs,
+                    20 * np.log10(np.abs(np.flip(h_reflection))),
+                    marker=".",
+                    color="b",
+                    label="simulation_inverse",
+                )
 
-    def freqz_comp_audacity(self, save_path=""):
-        x, y = plot_audacity_freq_response()
-        plt.scatter(x, y, marker='.', color='dimgrey', label='after processing')
+            plt.xlim(1,)
+            plt.xscale("log")
+            plt.grid()
+            plt.legend()
 
-        plt.scatter(
-            self.cufoff_freq,
-            self.gain,
-            marker="o",
-            color="orangered",
-            label="target"
-        )
+            if len(save_path) == 0:
+                plt.show()
+            else:
+                plt.savefig(save_path)
+                plt.show()
 
-        _fontsize = 'large'
-        plt.xlim(20,)
-        plt.xscale("log")
-        plt.xticks([20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000],
-                ["20", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"],
-                fontsize=_fontsize)
-        plt.yticks(np.arange(-20, 40, 10) if min(self.gain) < 0 else np.arange(0, 40, 10),
-                fontsize=_fontsize)
-        plt.grid()
-        plt.legend(fontsize="large")
-        plt.xlabel("Frequency (Hz)",
-                fontsize=_fontsize)
-        plt.ylabel("Gain (dB)",
-                fontsize=_fontsize)
-
-        if len(save_path)==0:
-            plt.show()
-        else:
-            plt.savefig(save_path)
-            plt.show()
-
+        return w, h
 
     def plot_debug(self):
         if len(self.axes) == 0:
             print("No axes to plot")
-
-
-if "__main__" == __name__:
-    import os
-
-    root = os.getcwd()
-    # sampling frequnecy
-    fs = 44100
-
-    # cuf-off freuqency case 1
-    fc = np.array(
-        (
-            20,
-            25,
-            31.5,
-            40,
-            50,
-            63,
-            80,
-            100,
-            125,
-            160,
-            200,
-            250,
-            315,
-            400,
-            500,
-            630,
-            800,
-            1000,
-            1250,
-            1600,
-            2000,
-            2500,
-            3150,
-            4000,
-            5000,
-            6300,
-            8000,
-            10000,
-            12500,
-            16000,
-            20000,
-        )
-    )
-
-    # cutoff frequency case 2
-    fB = np.array(
-        [
-            2.3,
-            2.9,
-            3.6,
-            4.6,
-            5.8,
-            7.3,
-            9.3,
-            11.6,
-            14.5,
-            18.5,
-            23.0,
-            28.9,
-            36.5,
-            46.3,
-            57.9,
-            72.9,
-            92.6,
-            116,
-            145,
-            185,
-            232,
-            290,
-            365,
-            463,
-            579,
-            730,
-            926,
-            1158,
-            1447,
-            1853,
-            2316,
-        ]
-    )
-    fU = np.array(
-        [
-            22.4,
-            28.2,
-            35.5,
-            44.7,
-            56.2,
-            70.8,
-            89.1,
-            112,
-            141,
-            178,
-            224,
-            282,
-            355,
-            447,
-            562,
-            708,
-            891,
-            1120,
-            1410,
-            1780,
-            2240,
-            2820,
-            3550,
-            4470,
-            5620,
-            7080,
-            8910,
-            11200,
-            14100,
-            17800,
-            22050,
-        ]
-    )
-    fL = np.zeros_like(fU)
-    fL[0] = 17.5
-    fL[1:] = fU[:-1]
-
-    fc_twice = np.zeros((2, len(fc)))
-    fc_twice[0, :] = np.append(10, fU[:-1])
-    fc_twice[1, :] = fc
-    fc_twice = fc_twice.reshape((fc_twice.shape[0] * fc_twice.shape[1],), order="F")
-
-    # gain case 1
-    gain_c1 = np.array(
-        [
-            12,
-            12,
-            10,
-            8,
-            4,
-            1,
-            0.5,
-            0,
-            0,
-            6,
-            6,
-            12,
-            6,
-            6,
-            -12,
-            12,
-            -12,
-            -12,
-            -12,
-            -12,
-            0,
-            0,
-            0,
-            0,
-            -3,
-            -6,
-            -9,
-            -12,
-            0,
-            0,
-            0,
-        ]
-    )
-
-    # gain case 2
-    gain_c2 = np.zeros_like(fc)
-    gain_c2[0::2] = 12
-    gain_c2[1::2] = -12
-
-    # gain case 3
-    gain_c3 = np.zeros_like(gain_c2)
-    gain_c3[np.where(fc == 2000)] = 12
-
-    # gain case 4
-    gain_c4 = np.ones_like(gain_c2) * 12
-
-    # gain case 5
-    gain_c5 = np.zeros_like(fc)
-    gain_c5[0::3] = 0
-    gain_c5[1::3] = 0
-    gain_c5[2::3] = 12
-
-    # set the gain
-    gains = [gain_c1, gain_c2, gain_c3, gain_c4, gain_c5]
-    # for id_gain, gain in enumerate(gains):
-    gain = gain_c5
-
-    gain_twice = np.zeros((2, len(fc)))
-    gain_twice[0, :] = gain
-    gain_twice[1, :] = gain
-    gain_twice = gain_twice.reshape(
-        (gain_twice.shape[0] * gain_twice.shape[1],), order="F"
-    )
-    gain_twice[1:] = gain_twice[:-1]
-    gain_twice[0] = 0
-
-    # set the Q, not implemented yet
-    Q = np.ones_like(fc)
-
-    eq = GraphicalEqualizer(fs, fc, gain, Q)
-    eq.freqz()
-    # eq.freqz_comp_audacity()
-
-    # file = "/lib/data/test_graphic_equalizer.txt"
-    # eq.write_to_file(f"{root}/{file}")
-
-    # print_func_time()
