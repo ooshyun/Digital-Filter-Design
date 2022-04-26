@@ -1,6 +1,5 @@
 **
 !.gitignore
-!lib/
 !study/
 !.style.yapf
 !LICENSE
@@ -8,3 +7,6 @@
 !pylintrc
 !*.md
 !*.txt
+!test/
+!docs/
+!src/
