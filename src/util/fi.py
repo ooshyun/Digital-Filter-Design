@@ -1,6 +1,6 @@
 """Fixed Point command FI
 
-	This function provides the same solution as ML's fi command.
+	This function provides the same solution as Matlab fi command.
 	The difference is that the output can actually be printed in the
 	screen rather than creating an object. This function also have the
 	option to return a list of values with the desired type of conversion.
@@ -39,13 +39,9 @@
 					* "Bin" : returns a string of bin values
 	Notes: There are some examples in the bottom of the function. To use them
 		   UNCOMMENT the necessary code.
-	---
-	TODO LIST
-		[ ] 1. Return value to not text format
 """
 import math
 import numpy as np
-
 
 def fi(Values, Signed, TotalLen, FracLen, Format=1, ReturnVal="None"):
     # Converting values
@@ -329,6 +325,26 @@ def fi(Values, Signed, TotalLen, FracLen, Format=1, ReturnVal="None"):
             return bin_text[:-1]
 
 
+def DOUBLE_TO_FIX(x, m, n): 
+    # return Q m.n
+    raise NotImplementedError
+    temp = 0. # double
+    min_val = 0. # double
+    max_val = 0. # double
+    min_val = -np.power(2, m)
+    max_val =  np.pow(2, m) - np.pow(2, -n)
+
+    if x > max_val:
+        return np.round(max_val * np.pow(2, n))  # int
+    elif x < min_val:
+        return np.round(min_val * np.pow(2, n))  # int
+    else:
+        return np.round(x       * np.pow(2, n))  # int
+
+def FIX_TO_DOUBLE(x, Q):
+    raise NotImplementedError
+    return x / pow(2, Q) # double
+
 if __name__ == "__main__":
     """1st Example
 		1 dec input, signed, 64 bit total, 63 bit fractional
@@ -477,3 +493,4 @@ if __name__ == "__main__":
     input_values = [0b10000000, 0b10101010, 0b11111111]
     fi(input_values, 0, 8, 0, 0)
     input("\nPress ENTER to close...")
+

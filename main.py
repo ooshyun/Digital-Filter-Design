@@ -70,15 +70,15 @@ def serial_equalizer_process():
     for f in fc_band:
         peak_filter = peaking(Wn=2 * f / fs, dBgain=6, Q=4)
         b, a = peak_filter
-        wave_processor.filters = b, a
+        wave_processor.filter_time_domain_list = b, a
 
     # wave_processor.graphical_equalizer = True
     wave_processor.run(
         savefile_path=result_path + "/whitenoise_3peak_250_2000_8000.wav"
     )
 
-    print(sum(wave_processor.freqfilter_time) / len(wave_processor.freqfilter_time))
-    print(sum(wave_processor.timefilter_time) / len(wave_processor.timefilter_time))
+    if len(wave_processor.time_filter_freq)!=0: print(sum(wave_processor.time_filter_freq) / len(wave_processor.time_filter_freq))
+    if len(wave_processor.time_filter_time)!=0: print(sum(wave_processor.time_filter_time) / len(wave_processor.time_filter_time))
 
 
 def parallel_equalizer_plot():
@@ -141,7 +141,7 @@ def parallel_equalizer_wav_process():
 
     wave_processor = WaveProcessor(wavfile_path=infile_path)
     wave_processor.graphical_equalizer = True
-    wave_processor.filters = coeff_text
+    wave_processor.filter_time_domain_list = coeff_text
     wave_processor.bias = bias
 
     outresult_path = outfile_path
@@ -170,8 +170,8 @@ def filter_plot():
 
     """Plot the several filters
     """
-    fc = 1000
-    gain = 3
+    fc = 1033.59375
+    gain = 6
     Q = 1 / np.sqrt(2)
     name = "Shelf Filter"
 
@@ -183,7 +183,7 @@ def filter_plot():
     shelf_filter = shelf(Wn=2 * fc / fs, Q=Q, dBgain=gain)
     allpass_filter = allpass(Wn=2 * fc / fs, Q=Q)
 
-    ploter.filters = shelf_filter
+    ploter.filters = peak_filter
     ploter.plot(type=["freq", "phase", "pole"], save_path=None, name=name)
 
 
@@ -201,14 +201,16 @@ def filter_process():
     infile_path = os.path.join(data_path, file_name)
     fs, data = wav.read(infile_path)
 
+    gain = 12
     fc = 1033.59375
     # time
     wave_processor = WaveProcessor(wavfile_path=infile_path)
     outfile_name = "White Noise_peaking_time_domain.wav"
-    peak_filter = peaking(Wn=2 * fc / fs, Q=1 / np.sqrt(2), dBgain=3)
-    wave_processor.filters = peak_filter
-    wave_processor.run(savefile_path=outfile_path + outfile_name)
-    print(sum(wave_processor.timefilter_time) / len(wave_processor.timefilter_time))
+    peak_filter = peaking(Wn=2 * fc / fs, Q=1 / np.sqrt(2), dBgain=gain)
+    wave_processor.filter_time_domain_list = peak_filter
+    # wave_processor.run(savefile_path=outfile_path + outfile_name)
+   
+    if len(wave_processor.time_filter_time)!=0: print(sum(wave_processor.time_filter_time) / len(wave_processor.time_filter_time))
 
     # frequency
     wave_processor = WaveProcessor(wavfile_path=infile_path)
@@ -216,13 +218,12 @@ def filter_process():
 
     fft_size = 256
     fft_band = np.arange(1, fft_size / 2 + 1) * fs / fft_size
-    # fc_band = np.arange(30, 22060, 10)
-    fc_band = np.array([100, 1000, 2000, 3000, 5000])
-    idfreq = np.argwhere(fft_band == fc)
-    wave_processor.freqfilters = idfreq
-    wave_processor.run(savefile_path=outfile_path + outfile_name)
+    coeff_frequency = np.ones(shape=(fft_size,))
+    coeff_frequency[np.argwhere(fft_band == fc)] = 10**(gain/20)
+    wave_processor.filter_freq_domain_list = coeff_frequency
+    # wave_processor.run(savefile_path=outfile_path + outfile_name)
 
-    print(sum(wave_processor.freqfilter_time) / len(wave_processor.freqfilter_time))
+    if len(wave_processor.time_filter_freq)!=0: print(sum(wave_processor.time_filter_freq) / len(wave_processor.time_filter_freq))
 
 
 def analyze_filter():
@@ -241,7 +242,7 @@ def analyze_filter():
 
     del filter_custom
 
-    """ Parametric filter analysis"""
+    """ Parametric filter analysis, serial structure"""
     ploter = FilterAnalyzePlot()
 
     fc = np.array([500, 4000])
@@ -259,7 +260,7 @@ def analyze_filter():
 
     del peq
 
-    """ Graphical filter analysis"""
+    """ Graphical filter analysis, parallel structure"""
     with open("./test/data/json/test_graphical_equalizer.json", "r") as f:
         test_case = json.load(f)
 
@@ -288,16 +289,16 @@ if __name__ == "__main__":
     PRINTER.info("Hello Digital Signal Processing World!")
 
     """filter cofficient design"""
-    # filter_plot()
-    # filter_process()
+    filter_plot()
+    filter_process()
 
     """Serial of filters coffcient design"""
-    # serial_equalizer_plot()
-    # serial_equalizer_process()
+    serial_equalizer_plot()
+    serial_equalizer_process()
 
     """Parallel of filters coffcient design"""
-    # parallel_equalizer_plot()
-    # parallel_equalizer_wav_process()
+    parallel_equalizer_plot()
+    parallel_equalizer_wav_process()
 
-    # analyze_filter()
+    analyze_filter()
     pass

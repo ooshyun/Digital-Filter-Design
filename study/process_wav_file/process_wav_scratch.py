@@ -1,11 +1,4 @@
-"""Real time DSP process Libraray
-    This library provides an easy solution to apply new algorithms with
-    no need to stress with the frame overlap for that.
-
-    There are different functions depending in the data input:
-
-    -----------------------------------------------------------------------------------
-    wave_file_process
+"""wave_file_process
     Function reads a wave file and call the processing functions entered by the user
     User can return the process data or save it in an wav file
         * Params:
@@ -40,54 +33,11 @@
             * Format: Python list of float objects
                       ([1,2,3...] for mono [[1,2,3..][1,2,3..]] for stereo)
     ---
-    Update 2021-11-10
-    - Added the time packet class to share the parameter for processing
-        - Data in each frame
-        - Time stamp
-        - Parameter
-        - Queue
-    ---
-    TODO LIST
-        [ ] 1. Refactor the code to make it more abstract
-        [ ] 2. Processing for a frame
-        [ ] 3. Processing wav using processing for a frame
-        [ ] 4. make class packet to be simple
-    -----------------------------------------------------------------------------------
 """
 import math
 import numpy as np
 import scipy.io.wavfile as wav
 import sys
-
-
-class packet(object):
-    def __init__(self):
-        self.timecounter = None
-        self.dataLength = None
-        self.data = None
-
-    def __get__(self):
-        if self.timecounter is None or self.data is None:
-            return None
-        else:
-            return self.timecounter, self.data
-
-    def set(self, timecounter=None, data=None):
-        if timecounter is None:
-            self.data = data
-            self.dataLength = len(self.data)
-        elif data is None:
-            self.timecounter = timecounter
-        else:
-            self.timecounter = timecounter
-            self.data = data
-            self.dataLength = len(self.data)
-
-    def copy(self):
-        buf_packet = packet()
-        buf_packet.set(timecounter=self.timecounter, data=self.data)
-        return buf_packet
-
 
 def _print_progress(iteration, total, prefix="", suffix="", decimals=1, barLength=50):
     formatStr = "{0:." + str(decimals) + "f}"
@@ -133,8 +83,6 @@ def wave_file_process(
     pre_proc_func=None,
     freq_proc_func=None,
     post_proc_func=None,
-    queue_shared=None,
-    parameter=None,
     full_freq_proc_func=None,
 ):
     if not get_file_details:
@@ -223,6 +171,7 @@ def wave_file_process(
         ],
         dtype="float64",
     )
+
     """Initializing the static variables used in WOLA operation"""
     output_index_start, output_index_end = 0, new_frame_size
     # Checking if input file is stereo and normalizing buffers
@@ -246,7 +195,7 @@ def wave_file_process(
     # Getting the different frames for left and right
     frames_data_left = [
         wav_data_left[(i * new_frame_size) : (i * new_frame_size + new_frame_size)]
-        for i in range(int(len(wav_data_left) / new_frame_size))
+        for i in range(len(wav_data_left) // new_frame_size)
     ]
 
     # The final output list with the entire data processed
@@ -283,12 +232,8 @@ def wave_file_process(
         ifft_out_right = np.zeros(fft_frame_size)
         out_frame_right = np.zeros(new_frame_size)
 
-    counter = packet()
-
     # The data frames loop
     for index in range(len(frames_data_left)):
-        counter = packet()
-        counter.set(timecounter=index)
         # tic = tm.perf_counter()
         """Initialize Variable"""
         new_frame_left, new_frame_right = None, None
@@ -314,19 +259,13 @@ def wave_file_process(
             if stereo:
                 # Adding the 2 streams in one list
                 indata = [new_frame_left, new_frame_right]
-                counter.set(data=indata)
-
-                _, outdata = pre_proc_func(counter, queue_shared, parameter).__get__()
+                outdata = pre_proc_func(indata)
 
                 pre_processed_frame_left = outdata[0]
                 pre_processed_frame_right = outdata[1]
             else:
                 indata = new_frame_left
-                counter.set(data=indata)
-
-                _, pre_processed_frame_left = pre_proc_func(
-                    counter, queue_shared, parameter
-                ).__get__()
+                pre_processed_frame_left = pre_proc_func(indata)
         """Overlap"""
         # Checking if 50% overlap to set the FFT input buffer
         if overlap == 50:
@@ -374,21 +313,14 @@ def wave_file_process(
         else:
             if stereo:
                 indata = [fft_out_left, fft_out_right]
-                counter.set(data=indata)
-
-                _, outdata = full_freq_proc_func(
-                    counter, queue_shared, parameter
-                ).__get__()
+                outdata = full_freq_proc_func(indata)
 
                 full_freq_processed_frame_left = outdata[0]
                 full_freq_processed_frame_right = outdata[1]
             else:
                 indata = fft_out_left
-                counter.set(data=indata)
 
-                _, full_freq_processed_frame_left = full_freq_proc_func(
-                    counter, queue_shared, parameter
-                ).__get__()
+                full_freq_processed_frame_left = full_freq_proc_func(indata)
         """Removing reflection"""
         fft_channels_left = full_freq_processed_frame_left[: (int(nfft / 2) + 1)]
         if stereo:
@@ -406,19 +338,15 @@ def wave_file_process(
             if stereo:
                 # Adding the 2 streams in one list
                 indata = [fft_channels_left, fft_channels_right]
-                counter.set(data=indata)
 
-                _, outdata = freq_proc_func(counter, queue_shared, parameter).__get__()
+                outdata = freq_proc_func(indata)
 
                 freq_processed_frame_left = outdata[0]
                 freq_processed_frame_right = outdata[1]
             else:
                 indata = fft_channels_left
-                counter.set(data=indata)
 
-                _, freq_processed_frame_left = freq_proc_func(
-                    counter, queue_shared, parameter
-                ).__get__()
+                freq_processed_frame_left = freq_proc_func(indata)
         """Mirror the spectrum"""
         fft_out_left[: int(nfft / 2)] = freq_processed_frame_left[: int(nfft / 2)]
 
@@ -507,19 +435,15 @@ def wave_file_process(
                 indata = [np.empty(len(new_frame_left)), np.empty(len(new_frame_left))]
                 indata[0] = out_frame_left
                 indata[1] = out_frame_right
-                counter.set(data=indata)
 
-                _, outdata = post_proc_func(counter, queue_shared).__get__()
+                outdata = post_proc_func(indata)
 
                 post_processed_frame_left = outdata[0]
                 post_processed_frame_right = outdata[1]
 
             else:
                 indata = out_frame_left
-                counter.set(data=indata)
-                _, post_processed_frame_left = post_proc_func(
-                    counter, queue_shared
-                ).__get__()
+                post_processed_frame_left = post_proc_func(indata)
         """Appending to Output"""
         # Adding the current frame to the output buffer
         output_left[output_index_start:output_index_end] = post_processed_frame_left[
@@ -556,27 +480,3 @@ def wave_file_process(
             data = np.vstack((left, right)).T
         print(out_file_name)
         wav.write(out_file_name, wav_freq, data)
-
-
-if __name__ == "__main__":
-    in_file = (
-        "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise.wav"
-    )
-    out_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Test.wav"
-    wave_file_process(
-        in_file_name=in_file,
-        out_file_name=out_file,
-        stereo=False,
-        block_size=512,
-        progress_bar=True,
-    )
-
-    in_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo.wav"
-    out_file = "/Users/seunghyunoh/workplace/study/filterdesign/ExampleMusic/White Noise Stereo Test.wav"
-    wave_file_process(
-        in_file_name=in_file,
-        out_file_name=out_file,
-        stereo=True,
-        block_size=512,
-        progress_bar=True,
-    )

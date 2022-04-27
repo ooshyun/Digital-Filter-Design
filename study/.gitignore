@@ -7,4 +7,5 @@
 !sgfilter/
 !hilbert_transform/
 !pole_zero_analysis/
+!process_wav_file/
 !*.py

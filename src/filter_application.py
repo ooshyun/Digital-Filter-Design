@@ -17,11 +17,10 @@
 """
 import time
 import numpy as np
-from scipy.signal import lfilter
+from scipy.signal import lfilter, lfilter_zi, filtfilt
 import scipy.io.wavfile as wav
 
-from .util import wave_file_process, packet
-
+from .audio import AudioProcess
 from .config import DEBUG
 
 if DEBUG:
@@ -46,13 +45,12 @@ class WaveProcessor(object):
             raise ValueError("wavfile_path must be str or np.ndarray")
 
         self._bias = None
-        self._filters = []
-        self._freqfilters = []
+        self._filter_time_domain_list = []
+        self._filter_freq_domain_list = []
         self.zi = []
 
-        self.timefilter_time = []
-        self.freqfilter_time = []
-        self.filter_time_olive = []
+        self.time_filter_time = []
+        self.time_filter_freq = []
 
         # for testing
         self.frame_prev = []
@@ -62,14 +60,14 @@ class WaveProcessor(object):
         self.graphical_equalizer = False
 
     @property
-    def filters(self) -> list:
-        return self._filters
+    def filter_time_domain_list(self) -> list:
+        return self._filter_time_domain_list
 
-    @filters.setter
-    def filters(self, coeff):
+    @filter_time_domain_list.setter
+    def filter_time_domain_list(self, coeff):
         if not isinstance(coeff, np.ndarray):
             coeff = np.array(coeff)
-        self._filters.append(np.array(coeff, dtype=np.float64))
+        self._filter_time_domain_list.append(np.array(coeff, dtype=np.float64))
         self.zi.append(
             np.zeros(shape=(coeff.shape[0], coeff.shape[-1] // 2 - 1), dtype=np.float64)
         )
@@ -83,25 +81,25 @@ class WaveProcessor(object):
         self._bias = np.array(coeff, dtype=np.float64)
 
     @property
-    def freqfilters(self) -> list:
-        return self._freqfilters
+    def filter_freq_domain_list(self) -> list:
+        return self._filter_freq_domain_list
 
-    @freqfilters.setter
-    def freqfilters(self, index):
-        self._freqfilters.append(np.array(index).flatten())
+    @filter_freq_domain_list.setter
+    def filter_freq_domain_list(self, index):
+        self._filter_freq_domain_list.append(np.array(index).flatten())
 
-    @check_time
-    def process_time_domain(self, inpacket: packet, queue, parameter):
+    def process_time_domain(self, indata):
         curr_time = time.perf_counter()
-        if len(self._filters) == 0:
-            return inpacket
+        if len(self._filter_time_domain_list) == 0:
+            return indata
         else:
-            in_timecount, indata = inpacket.__get__()
-            outdata = indata.copy()
+            frame = indata.copy()
+            outdata = np.zeros_like(frame)
+
             if self.graphical_equalizer:
                 result = np.zeros_like(outdata, dtype=np.float)
 
-                coeff = self._filters[0]
+                coeff = self._filter_time_domain_list[0]
                 coeff = coeff.reshape(coeff.shape[0], 2, coeff.shape[1] // 2)
                 zi = self.zi[0]
                 bias = self._bias
@@ -134,42 +132,33 @@ class WaveProcessor(object):
                 assert len(outdata) == len(result)
                 outdata = result
             else:
-                for f in self._filters:
+                for f in self._filter_time_domain_list:
                     b, a = f
-                    outdata = lfilter(b, a, outdata)
+                    outdata = lfilter(b, a, frame)
+            self.time_filter_time.append(time.perf_counter() - curr_time)
+            return outdata
 
-            self.timefilter_time.append(time.perf_counter() - curr_time)
-            outpacket = packet()
-            outpacket.timecounter = in_timecount
-            outpacket.data = outdata
-            return outpacket
-
-    def process_freq_domain(self, inpacket, queue, parameter):
+    def process_freq_domain(self, indata):
         curr_time = time.perf_counter()
-        if len(self._freqfilters) == 0:
-            return inpacket
+        if len(self._filter_freq_domain_list) == 0:
+            return indata
         else:
-            _, indata = inpacket.__get__()
             outdata = indata.copy()
-            # TODO: Need to fixed for flexibility
-            for idx, coeff in enumerate(self._freqfilters):
-                outdata[idx + 1 + 56] = outdata[idx + 1 + 56] * coeff
-            self.freqfilter_time.append(time.perf_counter() - curr_time)
+            
+            for coeff in self._filter_freq_domain_list:
+                outdata[:outdata.shape[0]//2+1] = outdata[:outdata.shape[0]//2+1] * coeff
+                
+            outdata[outdata.shape[0]//2+1:] = np.conjugate(outdata[1:outdata.shape[0]//2])
+            self.time_filter_freq.append(time.perf_counter() - curr_time)
+            return outdata
 
-            outpacket = packet()
-            outpacket.timecounter = 0
-            outpacket.data = outdata
-            return outpacket
-
-    def run(self, savefile_path) -> None:
-        wave_file_process(
-            in_file_name=self.wavfile_path,
-            out_file_name=savefile_path,
-            progress_bar=True,
-            stereo=False,
-            overlap=75,
-            block_size=256,
-            zero_pad=False,
-            pre_proc_func=self.process_time_domain,
-            freq_proc_func=self.process_freq_domain,
-        )
+    def run(self, savefile_path) -> None:        
+        audio_process = AudioProcess(sampling_freq=self.sampleing_freq,
+                                    framesize=64,
+                                    channels=1,
+                                    zeropad=False,
+                                    process_encode=self.process_time_domain,
+                                    process_fft=self.process_freq_domain,
+                                    in_file_path=self.wavfile_path)
+                                    
+        audio_process.save(out_file_path=savefile_path)
