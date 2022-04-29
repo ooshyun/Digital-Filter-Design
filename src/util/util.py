@@ -1,8 +1,3 @@
-"""Utility 
-
-    TODO:
-        [ ] cvt_pcm2wav: check validation of functionality
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import librosa
@@ -12,85 +7,9 @@ from scipy.signal import tf2zpk
 from matplotlib.ticker import MultipleLocator
 
 
-def cvt_pcm2wav(from_file, to_file, sampling_freq, dtype):
-    """Convert PCM file to WAV file.
-        Not prove yet, it is not match with matlab convert.
-    """
-    raise NotImplementedError
-    with open(from_file, "rb") as opened_pcm_file:
-        buf = opened_pcm_file.read()
-        pcm_data = np.frombuffer(buf, dtype=dtype)
-        wav_data = librosa.util.buf_to_float(pcm_data, 2)
-    wav.write(to_file, sampling_freq, wav_data)
-
-
-def cvt_float2fixed(coeff):
-    from .fi import fi
-
-    coeff = np.array(coeff).tolist()
-
-    for location in range(len(coeff)):
-        for i in range(len(coeff[location])):
-            coeff[location][i] = fi(coeff[location][i], 1, 32, 30, 1, "Hex")
-
-    for location in range(len(coeff)):
-        print("{", end="")
-        for i in range(len(coeff[location])):
-            print(coeff[location][i], end="")
-            if i == len(coeff[location]) - 1:
-                continue
-            else:
-                print(", ", end="")
-        print("}")
-
-
-def cvt_char2num(array: list):
-    for i in range(len(array)):
-        if isinstance(array[i], list):
-            cvt_char2num(array[i])
-        else:
-            if isinstance(array[i], str):
-                if "j" in array[i]:
-                    array[i] = complex(array[i])
-                else:
-                    array[i] = float(array[i])
-            elif isinstance(array[i], float):
-                pass
-            elif isinstance(array[i], int):
-                pass
-            else:
-                raise ValueError("Wrong type")
-
-
-def plot_frequency_response(
-    ax: plt.axes,
-    x,
-    y,
-    xlim,
-    xlabels,
-    xaxis=None,
-    xtitle=None,
-    yaxis=None,
-    ylim=None,
-    ylabels=None,
-    ytitle=None,
-):
-    # ax.semilogx(x, y)
-    ax.plot(x, y)
-    ax.set_xscale("log")
-    ax.set_xlim(xlim)
-    if ylim:
-        ax.set_ylim(ylim)
-    if xaxis is not None:
-        ax.set_xticks(xaxis)
-    ax.set_xticklabels(xlabels)
-    ax.minorticks_off()
-    ax.grid(True)
-    ax.set_xlabel(xtitle)
-    ax.set_ylabel(ytitle)
-
-
 def plot_pole_zero_analysis(ax: plt.axes, b, a):
+    """Plot poles and zeros through filter coefficient
+    """
     if isinstance(a[0], np.ndarray):
         len_zi = len(a[0])
     else:
@@ -121,3 +40,87 @@ def plot_pole_zero_analysis(ax: plt.axes, b, a):
 
     ax.xaxis.set_major_locator(MultipleLocator(0.1))
     ax.yaxis.set_major_locator(MultipleLocator(0.1))
+
+
+def plot_frequency_response(
+    ax: plt.axes,
+    x,
+    y,
+    xlim,
+    xlabels,
+    xaxis=None,
+    xtitle=None,
+    yaxis=None,
+    ylim=None,
+    ylabels=None,
+    ytitle=None,
+):
+    """Plot x and y data based on frequency scaling 
+    """
+    # ax.semilogx(x, y)
+    ax.plot(x, y)
+    ax.set_xscale("log")
+    ax.set_xlim(xlim)
+    if ylim:
+        ax.set_ylim(ylim)
+    if xaxis is not None:
+        ax.set_xticks(xaxis)
+    ax.set_xticklabels(xlabels)
+    ax.minorticks_off()
+    ax.grid(True)
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+
+
+def cvt_float2fixed(coeff):
+    """Print fixed-point coefficients for C/C++.
+    """
+    from .fi import fi
+
+    coeff = np.array(coeff).tolist()
+
+    for location in range(len(coeff)):
+        for i in range(len(coeff[location])):
+            coeff[location][i] = fi(coeff[location][i], 1, 32, 30, 1, "Hex")
+
+    for location in range(len(coeff)):
+        print("{", end="")
+        for i in range(len(coeff[location])):
+            print(coeff[location][i], end="")
+            if i == len(coeff[location]) - 1:
+                continue
+            else:
+                print(", ", end="")
+        print("}")
+
+
+def cvt_char2num(array: list):
+    """Convert char array including the meaning of int
+        to int array.
+    """
+    for i in range(len(array)):
+        if isinstance(array[i], list):
+            cvt_char2num(array[i])
+        else:
+            if isinstance(array[i], str):
+                if "j" in array[i]:
+                    array[i] = complex(array[i])
+                else:
+                    array[i] = float(array[i])
+            elif isinstance(array[i], float):
+                pass
+            elif isinstance(array[i], int):
+                pass
+            else:
+                raise ValueError("Wrong type")
+
+
+def cvt_pcm2wav(from_file, to_file, sample_rate, dtype):
+    """[TODO] Convert PCM file to WAV file.
+    """
+    raise NotImplementedError
+    with open(from_file, "rb") as opened_pcm_file:
+        buf = opened_pcm_file.read()
+        pcm_data = np.frombuffer(buf, dtype=dtype)
+        wav_data = librosa.util.buf_to_float(pcm_data, 2)
+    wav.write(to_file, sample_rate, wav_data)

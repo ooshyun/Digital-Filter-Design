@@ -1,34 +1,3 @@
-"""Parallel Graphical Equalizer
-
-    This is for parallel structure of filters based the paper named
-        
-        Efficient Multi-Band Digital Audio Graphic Equalizer with Accurate Frequency Response Control.pdf
-
-    The details of test is on test.py.
-
-    The conversion function time to compute under the python is below,
-            
-        <function escape_zero_difference at 0x7fa26a39b550> 0.111 ms
-        <function WaveProcessor.process_time_domain at 0x7fa26a39b1f0> 8.209 ms
-
-        32 band:
-        <function genTargetResponse at 0x7fa26a39b700> 27.434 ms
-        <function genPolePosition at 0x7fa26a39b820> 0.125 ms
-        <function genZeroPosition at 0x7fa26a39b940> 9.757 ms
-        
-        64 band:
-        <function genTargetResponse at 0x7fdd60e5b5e0> 41.191 ms
-        <function genPolePosition at 0x7fdd60e5b700> 0.126 ms
-        <function genZeroPosition at 0x7fdd60e5b820> 32.792 ms
-    ---
-    TODO:
-    [ ] genZeroPostition
-        1. Checking function not to be correct for the denominator and the matrix M
-
-    [ ] merge:
-        - graphical equalizer to filter_analayze
-
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import hilbert
@@ -37,13 +6,12 @@ from scipy.interpolate import pchip_interpolate
 from .config import EPS, DEBUG, DEBUG_PRINT, DEBUG_PLOT
 
 if DEBUG:
-    from .debugging import check_time, maker_logger
-PRINTER = maker_logger()
+    from .debugging import check_time
 
 
 @check_time
 def escape_zero_difference(array: np.ndarray):
-    """
+    """Avoid zero difference between two adjacent values for interpolation
     """
     result_array = array.copy()
 
@@ -91,13 +59,10 @@ def escape_zero_difference(array: np.ndarray):
 
 @check_time
 def genTargetResponse(
-    origin: int,
-    sampling_freq: int,
-    cutoff_freq: np.array,
-    gains: np.array,
-    steps: float,
+    origin: int, sample_rate: int, cutoff_freq: np.array, gains: np.array, steps: float,
 ):
     """Target frequency response
+        The procedure of design is as below,
         1. Find amplitudes of the target frequency using spline interpolation
             a. find the index of the target frqeuency in linear scale
                 - set the origin for avoiding x to 0 in log10
@@ -118,15 +83,14 @@ def genTargetResponse(
                 - https://dsp.stackexchange.com/questions/42917/hilbert-transformer-and-minimum-phase
                 - https://ccrma.stanford.edu/~jos/sasp/sasp.html
             f. Resample in Logarithmic frequency
-                - compute reflection
-        
+                - compute reflection   
         * Linear resolution = steps
         * Logarithmic resolution = the number of cuf-off frequency * 10
     """
 
     """ 1. Find amplitudes of the target frequency using spline interpolation """
     # 1-a. find the index of the target frqeuency in linear scale
-    fs, fc, target_gain, num_step = sampling_freq, cutoff_freq, gains, steps
+    fs, fc, target_gain, num_step = sample_rate, cutoff_freq, gains, steps
     f_linear = np.linspace(origin, fs // 2, num_step, endpoint=True)
 
     if DEBUG_PRINT:
@@ -282,7 +246,7 @@ def genTargetResponse(
         fc_plot = np.zeros(len(fc) + 2)
         fc_plot[0] = origin
         fc_plot[1:-1] = fc
-        fc_plot[-1] = int(sampling_freq / 2)
+        fc_plot[-1] = int(sample_rate / 2)
 
         axes[0].scatter(
             target_freq,
@@ -308,24 +272,24 @@ def genTargetResponse(
 
 
 @check_time
-def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
+def genPolePosition(sample_rate: int, cutoff_freq: np.array):
     """Generate pole position from cutoff frequency
-        Based on the paper, it is fixed-pole design.
-
+        It follows the fixed-pole design.
+        In fixed-pole design, the simple way is considering 3dB point and Q factor.
+        
         theta = 2*pi*fk/fs, for k= 1, 2, ..., N
         pole = e^{delta_theta_k/2}*e^{+-j*theta_k}
 
-        * e^{delta_theta_k/2} means poles set at -3dB points
         delta_theta_1 = theta_2 - theta_1,
         delta_theta_k = (theta_k+1 - theta_k-1)/2,
-        delta_theta_N = theta_N - theta_N-1
+        delta_theta_N = theta_N - theta_N-1 (N is the number of cutoff frequency)
 
         ak,1 = (-p_k + p_k_conj) = -2|p_k|cos(theta_k)
         ak,2 = |p_k|^2
-        * N is the number of cutoff frequency
         
-        * Why use delta_theta?
-            Detail: 
+        Notes
+        -----
+        - Why use delta_theta?
             The pole position relates to Quality Factor (Q), Damping factor.
             This has the form of biquid filter design, which the simple way to design is 
             a pole and the conjugate of this pole as below,
@@ -340,31 +304,33 @@ def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
                 prof.
                     f_k = 10^{f_0+nk}, f_0 is the first cutoff frequency, nk is the k-th order.
                     f_{k+1} - f_{k-1} = 10^{f_0+nk+1} - 10^{f_0+nk-1}
-                                      = 10^{f_0+nk}(10^n-10^{-n})
+                                        = 10^{f_0+nk}(10^n-10^{-n})
                     In this paper, n = 0.1 (n means the resolution of logarithmic frequency)
                     f_{k+1} - f_{k-1} = 10^{f_0+nk}(10^{0.1}-10^{-0.1})
-                                      = 0.46*10^{f_0+nk}
-                                      = 0.46f_k , theta_k = 2*pi*f_k/fs
+                                        = 0.46*10^{f_0+nk}
+                                        = 0.46f_k , theta_k = 2*pi*f_k/fs
                     delta_theta_k = 0.46 theta_k
 
                     following above sequency in k=0, k=N, 
                         e^{\omega_0} = e^{alpha_k*theta_k},
                         alpha_k = 0.25, k=0
-                                  0.23, 0<k<N
-                                  0.20, k=N
+                                    0.23, 0<k<N
+                                    0.20, k=N
                     Finally, Q = w_k / 2*\omega_k = w_k / 2*alpha_k*theta_k = fs / 2*alpha_k 
             Then, 
                 Q = omega_k / 2*alpha_k*theta_k ~= 2
             The value means usually underdamping by refering Q for critical damping = 1/2. 
+            * It can test the Q value complex_resonator function in study/pole_zero_position.py
 
-        Reference. 
-            docs/img/pole_position.jpeg
-            docs/pdf/pole_position.pdf
-            Example for fixed-pole filter design. http://home.mit.bme.hu/~bank/parfilt/
-            Concept for fixed-pole. /docs/img/pole_position.jpeg
-            Concept for Quality Factor. https://ccrma.stanford.edu/~jos/filters/Quality_Factor_Q.html
+        Reference
+        ---------
+        - docs/img/pole_position.jpeg
+        - docs/pdf/pole_position.pdf
+        - Example for fixed-pole filter design. http://home.mit.bme.hu/~bank/parfilt/
+        - Concept for fixed-pole. /docs/img/pole_position.jpeg
+        - Concept for Quality Factor. https://ccrma.stanford.edu/~jos/filters/Quality_Factor_Q.html
     """
-    theta = 2 * np.pi * cutoff_freq / sampling_freq
+    theta = 2 * np.pi * cutoff_freq / sample_rate
     delta_theta = np.zeros_like(theta)
     delta_theta[0] = theta[1] - theta[0]
     for id in range(1, len(theta) - 1):
@@ -382,15 +348,19 @@ def genPolePosition(sampling_freq: int, cutoff_freq: np.array):
 
 @check_time
 def genZeroPosition(
-    sampling_freq: int, a_coeff: tuple, target_freq: np.array, target_h: np.array
+    sample_rate: int, a_coeff: tuple, target_freq: np.array, target_h: np.array
 ):
     """Generate zero position from target frequency and frequency response,
-        High-Precision Parallel Graphical Eqaulizer
+        
+        Notes
+        -----
+        High-Precision Parallel Graphical Eqaulizer whose transfer function is given by:
             z = e^(-jwn),
             H(z) = d0+ \sum_{k=1}^{N} ( b_{k,0} + b_{k,1} z^-1 ) / (1 + a_{k,1}*z^{-1} + a_{k,2}*z^{-2})
             h = Mp
             p = [b1,0, b1,1, ..., bK,0, bK,1, d0]^T
-        M contains 1/(1 + ak,1 e^(-jwn) + ak,2 e^(-jwn)^2)) and e^(-jwn)/(1 + ak,1 e^(-jwn) + ak,2 e^(-jwn)^2))
+
+        The matrix M contains 1/(1 + ak,1 e^(-jwn) + ak,2 e^(-jwn)^2)) and e^(-jwn)/(1 + ak,1 e^(-jwn) + ak,2 e^(-jwn)^2))
         The last column of M belongs to the direct path gain d0, and thus all of its elements are one.
         The procedure is as below,
             1. denominator
@@ -400,6 +370,7 @@ def genZeroPosition(
                 b. compute feedback coefficient
                     array          : 1 / (1 + a_(k,1)*e^(-1jwn) + a_(k,2)*e^(-2jwn))
                     shape          : (wn, a_coeff) * (a_coeff, fc) = (wn, fc) 
+
             2. nominator and buffer
                 a. compute feedforward coefficient
                     array          : [1/(1 + a_(k,1)*e^(-jwn) + a_(k,2)*e^(-jwn)^2)), e^(-jwn)/(1 + a_(k,1)*e^(-jwn) + a_(k,2)*e^(-jwn)^2)) , ... , 1]
@@ -408,14 +379,15 @@ def genZeroPosition(
                 b. change the sequence of coefficient and add buffer line as below,
                     array          : [b0,0, b0,1, b1,0, b1,1, b2,0, b2,1 ..., 1]
                     shape          : (wn, fc, 2) -> (wn, fc*2) -> append 1 -> (wn, fc*2+1) 
+
             3. computation for desired gain
                 a. frequency weight applying target and cofficient matrix
                     weight         : 1/|ht|^(3/4)
                 b. least-square solution
                     [V] Real impulse response   , p_opt = M^+ @ h_t, M^+ = (M^T @ M)^-1 @ M^T
-                    [ ] Complex impulse response, p_opt = M^+ @ h_t  M^+ = (M^H @ M)^-1 @ M^H
+                    Complex impulse response, p_opt = M^+ @ h_t  M^+ = (M^H @ M)^-1 @ M^H
     """
-    fs = sampling_freq
+    fs = sample_rate
     fn = target_freq[: len(target_freq) // 2 + 1]
     ht = target_h[: len(target_h) // 2 + 1]
     a, wn = np.array(a_coeff), 2 * np.pi * fn / fs
@@ -455,7 +427,7 @@ def genZeroPosition(
     M_coeff_w = np.expand_dims(weight_wn, axis=-1) * M_coeff
     ht_w = weight_wn * ht
 
-    # 3-b. least-square solution (the paper version)
+    # 3-b. least-square solution for the complex response
     # p_opt = M+ @ h_t, M+ = (M^T @ M)^-1 @ M^T
     # M_r = np.array([M_coeff_w.real, M_coeff_w.imag])                     # (2, wn, fc*2+1), n = 289, fc = 31, dc
     # h_tr = np.array([ht_w.real, ht_w.imag])                              # (2, 289)
@@ -464,10 +436,8 @@ def genZeroPosition(
     # M_inv = np.linalg.inv(M_inv)                                         # (2, 63, 63), if complex, using np.linalg.pinv
     # M_r_plus = np.matmul(M_inv, M_r.transpose(0, 2, 1))                  # (2, 63, 63) @ (2, 63, 289) = (2, 63, 289)
     # p_opt = np.matmul(M_r_plus, np.expand_dims(h_tr, axis=-1))           # (2, 63, 289) @ (2, 289, 1) -> (2, 63, 1)
-    # p_opt = p_opt[0]                                                     # extract real part
-    # p_opt = p_opt.squeeze()
 
-    # 3-b. least-square solution (compressed version)
+    # 3-b. least-square solution for the real impulse response
     M_r = M_coeff_w.real  # (289, 63)
     h_tr = ht_w.real  # (289, )
     M_inv = np.matmul(M_r.T, M_r)  # (63, 289) @ (289, 63) = (63, 63)
@@ -513,23 +483,59 @@ def genZeroPosition(
 
 
 class GraphicalEqualizer(object):
-    """Graphical Equalizer
-        H(z) = d + sum_k=1^K (bk,0 + bk,1z-1) / (1 + ak,0z-1 + ak,1z-2)
+    """Parallel Graphical Equalizer
+
+        This is for parallel structure of filters.
+        
+        Parameters
+        ----------
+        sample_rate (int): sample rate
+        cufoff_freq (int): cutoff frequency
+        gain (int): gain in each cutoff frequency
+
+        TODO LIST
+        ---------
+        self.genZeroPostition
+            Checking function not to be correct for the denominator and the matrix M
+
+        Notes
+        -----
+        Frequency response of the filter is calculated by the following formula:
+            
+            H(z) = d + sum_k=1^K (bk,0 + bk,1z-1) / (1 + ak,0z-1 + ak,1z-2)
+
+        The conversion function time to compute under the python is below,    
+            function escape_zero_difference: 0.111 ms
+            function self.process_time_domain: 8.209 ms
+
+            32 band:
+            function genTargetResponse: 27.434 ms
+            function genPolePosition: 0.125 ms
+            function genZeroPosition: 9.757 ms
+            
+            64 band:
+            function genTargetResponse: 41.191 ms
+            function genPolePosition: 0.126 ms
+            function genZeroPosition: 32.792 ms        
+        
+        Reference
+        ---------
+        Efficient Multi-Band Digital Audio Graphic Equalizer with Accurate Frequency Response Control.pdf
     """
 
-    def __init__(self, sampling_freq, cufoff_freq: np.array, gain: np.array) -> None:
-        self.sampling_freq = sampling_freq
+    def __init__(self, sample_rate, cufoff_freq: np.array, gain: np.array) -> None:
+        self.sample_rate = sample_rate
         self.cufoff_freq = cufoff_freq
         self.gain = gain
         self.steps = 2 ** 15
         self.origin = 1
         self.axes = []
         self.freq_target, self.H_target = genTargetResponse(
-            self.origin, self.sampling_freq, self.cufoff_freq, self.gain, self.steps
+            self.origin, self.sample_rate, self.cufoff_freq, self.gain, self.steps
         )
-        self.a = genPolePosition(self.sampling_freq, self.cufoff_freq)
+        self.a = genPolePosition(self.sample_rate, self.cufoff_freq)
         self.d, self.b = genZeroPosition(
-            self.sampling_freq, self.a, self.freq_target, self.H_target
+            self.sample_rate, self.a, self.freq_target, self.H_target
         )
         self._coeff = [
             (self.b, self.a, self.d),
@@ -563,7 +569,7 @@ class GraphicalEqualizer(object):
                -jwn                        -jwn           
             H(e  ) =  d +  sigma_k H_k(e  )
         """
-        fs = self.sampling_freq
+        fs = self.sample_rate
         fc_target, gain_target = self.freq_target, 20 * np.log10(np.abs(self.H_target))
         num_step = self.steps
 
@@ -582,7 +588,7 @@ class GraphicalEqualizer(object):
         h += d
 
         if show:
-            plt.scatter(
+            plt.plot(
                 w / (2 * np.pi) * fs,
                 20 * np.log10(np.abs(h)),
                 marker="*",
@@ -590,7 +596,7 @@ class GraphicalEqualizer(object):
                 label="simulation",
             )
 
-            plt.scatter(
+            plt.plot(
                 fc_target[: len(fc_target) // 2 + 1],
                 gain_target[: len(fc_target) // 2 + 1],
                 marker="o",
@@ -622,6 +628,8 @@ class GraphicalEqualizer(object):
             plt.xscale("log")
             plt.grid()
             plt.legend()
+            plt.xlabel("Frequency [Hz]")
+            plt.ylabel("Gain [dB]")
 
             if len(save_path) == 0:
                 plt.show()

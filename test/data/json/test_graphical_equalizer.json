@@ -1,6 +1,6 @@
 {
     "1": {
-        "sampling_frequency": 44100,
+        "sample_rate": 44100,
         "cutoff_frequency": [
             20.0,
             25.0,
@@ -203,7 +203,7 @@
         ]
     },
     "2": {
-        "sampling_frequency": 44100,
+        "sample_rate": 44100,
         "cutoff_frequency": [
             10.0,
             20.0,

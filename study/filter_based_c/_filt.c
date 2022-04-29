@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-// Ref.
+// Reference.
 // https://github.com/scipy/scipy/blob/master/scipy/signal/_sosfilt.pyx
 // https://github.com/scipy/scipy/blob/master/scipy/signal/_lfilter.c.in
 

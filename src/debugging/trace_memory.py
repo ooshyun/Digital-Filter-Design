@@ -1,4 +1,5 @@
-"""Memory tracking
+"""[TODO] Memory tracking
+    WARNING: NOT TESTED
 """
 
 import tracemalloc
@@ -11,8 +12,8 @@ my_snapshot = None
 
 @app.route("/karyogram", methods=["POST"])
 def karyogram():
-    print(f"hello memory tracking world")
-
+    """
+    """
     # Save to global var for using track
     global my_snapshot
     if not my_snapshot:
@@ -30,7 +31,8 @@ def karyogram():
 
 @app.route("/infer", methods=["POST"])
 def infer():
-    print(f"hello memory tracking world")
+    """
+    """
     # Get the statistics in current memory state and Print TOP 5
     snapshot = tracemalloc.take_snapshot()
     for idx, stat in enumerate(snapshot.statistics("lineno")[:5], 1):

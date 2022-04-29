@@ -1,49 +1,38 @@
-"""Fixed Point command FI
-
-	This function provides the same solution as Matlab fi command.
-	The difference is that the output can actually be printed in the
-	screen rather than creating an object. This function also have the
-	option to return a list of values with the desired type of conversion.
-	This function also provide error tracing, showing the values that are
-	not corrected input for the configuration set by the user. The first
-	value display will be in the input format.
-	- This code can be used 2 ways:
-	1- As a library by adding the following line in your code:
-
-							from fi import fi
-
-		IMPORTANT: remember to have this file in the same folder as the
-					file you will be calling fi function from
-	2- As a standalone conversion code. Hence you can run this code using
-	command line like shown below:
-
-							python fi.py
-
-		IMPORTANT: remember to have terminal/prompt opened in the same
-		folder as this file
-	Parameters:
-		- Values: The input values of the function.
-				  * The input is a PYTHON LIST of any size
-				  	(can accept also one INT or FLOAT)
-				  * For dec to hex or bin conversion the values need to be in
-				   dec format and for hex or bin to dec conversion values
-				   need to be bigger than 1
-		- Signed: Check if the value is signed (1) or unsigned (0)
-		- TotalLen: The total number of bits used
-		- FracLen: The number of bits used to represent the fractional part
-		- Format: Check if the input is decimal (1) or hex/bin (0)
-		- ReturnVal: Check if the function returns value or just prints
-					* "None": returns None, only prints values
-					* "Dec" : returns a list of decimal values
-					* "Hex" : returns a string of hex values
-					* "Bin" : returns a string of bin values
-	Notes: There are some examples in the bottom of the function. To use them
-		   UNCOMMENT the necessary code.
-"""
 import math
 import numpy as np
 
+
 def fi(Values, Signed, TotalLen, FracLen, Format=1, ReturnVal="None"):
+    """Fixed Point command fi
+        Parameters
+        ----------
+        Values (list, int or float): The input values of the function For decimal to hexadecimal or binary conversion, 
+                                    the values need to be in decimal format, and for hex or bin to dec conversion,
+                                    values need to be bigger than 1
+        Signed (1 or 0): Check if the value is signed (1) or unsigned (0)
+        TotalLen (int): The total number of bits used
+        FracLen (int): The number of bits used to represent the fractional part
+        Format (1 or 0): Check if the input is decimal (1) or hex/bin (0)
+        ReturnVal (str): Check if the function returns value or just prints
+                "None": returns None, only prints values
+                "Dec" : returns a list of decimal values
+                "Hex" : returns a string of hex values
+                "Bin" : returns a string of bin values
+        Notes
+        -----
+        This function provides the same solution as Matlab fi command.
+        The difference is that the output can actually be printed in the
+        screen rather than creating an object. This function also have the
+        option to return a list of values with the desired type of conversion.
+        This function also provide error tracing, showing the values that are
+        not corrected input for the configuration set by the user. The first
+        value display will be in the input format.
+
+        Examples
+        --------
+        There are some examples in the bottom of the function
+        
+    """
     # Converting values
     dec_text = ""
     hex_text = ""
@@ -325,25 +314,31 @@ def fi(Values, Signed, TotalLen, FracLen, Format=1, ReturnVal="None"):
             return bin_text[:-1]
 
 
-def DOUBLE_TO_FIX(x, m, n): 
+def DOUBLE_TO_FIX(x, m, n):
+    """ TODO
+    """
     # return Q m.n
     raise NotImplementedError
-    temp = 0. # double
-    min_val = 0. # double
-    max_val = 0. # double
+    temp = 0.0  # double
+    min_val = 0.0  # double
+    max_val = 0.0  # double
     min_val = -np.power(2, m)
-    max_val =  np.pow(2, m) - np.pow(2, -n)
+    max_val = np.pow(2, m) - np.pow(2, -n)
 
     if x > max_val:
         return np.round(max_val * np.pow(2, n))  # int
     elif x < min_val:
         return np.round(min_val * np.pow(2, n))  # int
     else:
-        return np.round(x       * np.pow(2, n))  # int
+        return np.round(x * np.pow(2, n))  # int
+
 
 def FIX_TO_DOUBLE(x, Q):
+    """ TODO
+    """
     raise NotImplementedError
-    return x / pow(2, Q) # double
+    return x / pow(2, Q)  # double
+
 
 if __name__ == "__main__":
     """1st Example
@@ -493,4 +488,3 @@ if __name__ == "__main__":
     input_values = [0b10000000, 0b10101010, 0b11111111]
     fi(input_values, 0, 8, 0, 0)
     input("\nPress ENTER to close...")
-

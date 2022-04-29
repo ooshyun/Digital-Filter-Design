@@ -1,18 +1,15 @@
-from random import sample
-import os
-import scipy.io.wavfile as wav
+"""Encoder for wav, pcm dataset including Audio and Speech
+"""
+
 import librosa
 import soundfile as sf
 import numpy as np
 
-"""
-WavFileWarning: Chunk (non-data) not understood, skipping it.
-
-"""
-
 
 def read_wav(file_path: str):
-    data, samplerate = librosa.load(file_path, sr=44100, mono=False)
+    """Read wave file and return the data and the sampling frequency
+    """
+    data, sample_rate = librosa.load(file_path, sr=44100, mono=False)
     if data.dtype == "int32":
         data = data.astype("float32") / 2 ** 31
     elif data.dtype == "int16":
@@ -24,10 +21,12 @@ def read_wav(file_path: str):
     else:
         raise ValueError("Unsupported data type: {}".format(data.dtype))
 
-    return data, samplerate
+    return data, sample_rate
 
 
-def write_wav(file_path: str, samplerate: int, data: np.ndarray, dtype: str = "int16"):
+def write_wav(file_path: str, sample_rate: int, data: np.ndarray, dtype: str = "int16"):
+    """Write wave file to path
+    """
     if dtype == "int32":
         data = data * 2 ** 31
         data = np.int32(data)
@@ -41,56 +40,40 @@ def write_wav(file_path: str, samplerate: int, data: np.ndarray, dtype: str = "i
         pass
     else:
         pass
-    
-    sf.write(file_path, data, samplerate)
+
+    sf.write(file_path, data, sample_rate)
 
 
 class WavEncoder(object):
-    def __init__(self, file_path) -> None:
-        self.data, self.samplerate = read_wav(file_path)
+    """Encoder for wav, pcm dataset including Audio and Speech
+    
+        This class read wav file, trasform the data to numpy ndarray for sound device format.
+        It chunk the data based on given the size of frame.
+
+        Parameters
+        ----------
+                file_path (type): the path for input file
+
+    """
+
+    def __init__(self, file_path: str) -> None:
+        self.data, self.sample_rate = read_wav(file_path)
         if len(self.data.shape) == 1:
             self.data = np.expand_dims(self.data, axis=0)
         self.data = self.data.T  # compatible soundfile format
 
-        self.counter = 0
-
-    def __enter__(self):
-        print("enter...")
-        return self
-
-    def get(self, block_size: int):
+    def get(self, frame_size: int):
         data_size = self.data.shape[0]
         stereo = self.data.shape[1]
-        if data_size % block_size == 0:
+        if data_size % frame_size == 0:
             output = self.data
         else:
-            # Chunk the data
             output = np.zeros(
-                shape=((data_size // block_size) * block_size, stereo),
-                dtype=self.data.dtype, # should match with input data
+                shape=((data_size // frame_size) * frame_size, stereo),
+                dtype=self.data.dtype,  # should match with input data
             )
-            output[:data_size, :] = self.data[:(data_size // block_size) * block_size, :].copy()
+            output[:data_size, :] = self.data[
+                : (data_size // frame_size) * frame_size, :
+            ].copy()
 
         return output
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        print("exit...")
-
-
-if __name__ == "__main__":
-    # Setup
-    blocksize = 64
-    file_path = ""
-
-    # Load data
-    encoder = WavEncoder(file_path)
-    in_data = encoder.get(blocksize)
-
-    # Read each frame
-    out_data = np.zeros_like(in_data)
-    for iframe in range(in_data.shape[0] // blocksize):
-        curr_frame = in_data[iframe * blocksize : (iframe + 1) * blocksize, :]
-        out_data[iframe * blocksize : (iframe + 1) * blocksize, :] = curr_frame
-
-    out_file_path = os.getcwd() + "/audio_in_mp3.wav"
-    # write_wav(out_file_path, 44100, out_data)

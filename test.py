@@ -1,8 +1,3 @@
-"""Example for several function to analyze the signal processing
-   [TODO]
-
-"""
-import json
 import matplotlib.pyplot as plt
 from scipy.fftpack import *
 import scipy.io.wavfile as wav
@@ -21,7 +16,7 @@ from src import (
 def example_fi():
     """Test fi command
     """
-    """ first """
+    """ first example"""
     x = 0xF9E68000  # Q 1.31
     b = 0x3DAC7CA5  # Q 2.30
     mul_x_b = 0xFFFD0FA0D34C00  # Q 2.46
@@ -41,7 +36,7 @@ def example_fi():
     y_shift = 0xFFFA1F41A69800  # Q 1.47
 
     y = 0xFA1F4100  # Q 1.31
-    """ second """
+    """ second example """
     x = 0xF9E68000  # Q 1.31
     b = 0x84A70600  # Q 2.30
 
@@ -75,7 +70,8 @@ def example_fi():
     print("-" * 10)
     if zi_predict - zi < 10e-3:
         print(f"PASS, {zi}")
-    """final"""
+    
+    """final example"""
     x = 0xF9E68000  # Q 1.31
     b = 0x3DAC7C00  # Q 2.30
 
@@ -147,7 +143,7 @@ def example_fi():
 
 def iir_filter_fixed_to_floating_format_plot():
     """Test for iir filter in floating format"""
-    ploter = FilterAnalyzePlot(sampling_freq=48000)
+    ploter = FilterAnalyzePlot(sample_rate=48000)
 
     # custom filter, Q 2.30, highpass
     alpha = [0x40000000, 0x84BCADBC, 0x3B6EA04E]
@@ -168,6 +164,7 @@ def iir_filter_fixed_to_floating_format_plot():
 
 def iir_filter_floating_to_fixed_format_print():
     from src import peaking
+
     fs = 48000
     fc_band = np.array([250, 2000, 8000])
     for fc in fc_band:
@@ -258,9 +255,9 @@ def iir_filter_fixed_to_floating_format_process():
     outfile_path = "./test/result/wav/White Noise_lowpass_floating_cvt2binary32.wav"
     fs, data = wav.read(infile_path)
 
-    nfft = 256 # It is already designed
-    coeff_frequency = np.zeros(shape=(nfft//2+1,))
-    coeff_frequency[:len(coeff_freq_domain)] = coeff_freq_domain
+    nfft = 256  # It is already designed
+    coeff_frequency = np.zeros(shape=(nfft // 2 + 1,))
+    coeff_frequency[: len(coeff_freq_domain)] = coeff_freq_domain
 
     wave_processor = WaveProcessor(wavfile_path=infile_path)
     wave_processor.sampleing_freq = fs
@@ -327,242 +324,7 @@ def scale_logarithmic():
     plt.show()
 
 
-def paper_plot_cascade_sheving_filter():
-    """ Cascade biquad 2nd order sheving filter
-        Paper.
-        SchultzHahnSpors_2020_ShelvingFiltersAdjustableTransitionBand_Paper.pdf
-    """
-    from scipy.signal import (
-        bilinear_zpk,
-        unit_impulse,
-        sos2zpk,
-        zpk2sos,
-        sosfilt,
-        sosfreqz,
-    )
-    from matplotlib.ticker import MultipleLocator
-    from src import (
-        low_shelving_2nd_cascade,
-        shelving_filter_parameters,
-        db,
-        set_rcparams,
-        set_outdir,
-        matchedz_zpk,
-    )
-
-    set_rcparams()
-
-    fs = 48000
-    fc = 1000
-    w0 = 1
-
-    # Frequency-domain evaluation
-    wmin, wmax, num_w = 2 ** -9.5, 2 ** 4.5, 1000
-    w = np.logspace(np.log10(wmin), np.log10(wmax), num=num_w)
-
-    fmin, fmax, num_f = 10, 22000, 1000
-    f = np.logspace(np.log10(fmin), np.log10(fmax), num=num_f)
-
-    # Time-domain evaluation
-    ws = 2 * np.pi * fs
-    s2z = matchedz_zpk
-    # s2z = bilinear_zpk
-
-    fig, ax = plt.subplots(figsize=(13, 7), ncols=2, gridspec_kw={"wspace": 0.25})
-    flim = fmin, fmax
-
-    fticks = fc * 2.0 ** np.arange(-8, 4, 2)
-    fticklabels = ["7.8", "31.3", "125", "500", "2k", "8k"]
-
-    fticks = 1000 * 2.0 ** np.arange(-6, 5, 1)
-    fticklabels = [
-        "15.",
-        "31.",
-        "62.",
-        "125",
-        "250",
-        "500",
-        "1k",
-        "2k",
-        "4k",
-        "8k",
-        "16k",
-    ]
-
-    print(len(fticklabels), fticks)
-
-    _Q = 1 / sqrt(2)
-
-    biquad_per_octave = 1
-
-    # _slope = -10 * np.log10(2)
-    _slope = -10 * np.log10(2)
-    _BWd = (
-        None  # biquad_per_octave * Bwd / octave, expect 0db frequency fc/BWd = 250 Hz
-    )
-    _G_desire = 6
-
-    n_list = np.arange(-3, 10, dtype=float)
-    n_list = [pow(2, n) for n in n_list]
-    n_list = list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    n_desire = []
-
-    for n in n_list:
-
-        print("-" * 10)
-        print(n)
-        print("-" * 10)
-        Q = _Q
-        BWd = _BWd
-        G_desire = _G_desire
-        slope = _slope * n
-
-        # Analog filter
-        H = np.zeros(num_w, dtype="complex")
-        biquad_per_octave, num_biquad, Gb, G = shelving_filter_parameters(
-            biquad_per_octave=biquad_per_octave, Gd=G_desire, slope=slope, BWd=BWd
-        )
-
-        if _G_desire is None:
-            _G_desire = BWd * slope
-        if slope is None:
-            slope = G_desire / BWd
-
-        sos_sdomain = low_shelving_2nd_cascade(
-            w0, Gb, num_biquad, biquad_per_octave, Q=Q
-        )
-        zs, ps, ks = sos2zpk(sos_sdomain)
-
-        # Digital filter s_domain * 2*pi*fc/fs
-        zpk = s2z(zs * 2 * np.pi * fc, ps * 2 * np.pi * fc, ks, fs=fs)
-        sos_zdomain = zpk2sos(*zpk)
-
-        # print(sos_zdomain)
-
-        w, H = sosfreqz(sos_zdomain, worN=f, fs=fs)
-
-        # Plot
-        def plot():
-            # kw = dict(c='cornflowerblue', lw=2, alpha=1, label='S {:+0.2f}'.format(abs(slope)/3))
-            kw = dict(c="cornflowerblue", lw=2, alpha=1)
-
-            # frequency response
-
-            # SLOPE (dB/dec) = ∆dB / (log10W2 – log10W1) = ∆dB / log10 (W2/W1);
-            # ∆dB = Slope (dB/dec) * log10(W2/W1);
-            # ∆dB = -20 (dB/dec) * log10(W2/W1)
-            # idx_h0 = np.where(db(H) < 9)[0][0] # -3dB
-            # # idx_h1 = idx_h0+1
-            # idx_h1 = np.where(db(H) < 10e-2)[0][0]
-            # f0 = f[idx_h0]
-            # h0 = db(H)[idx_h0]
-            # f1 = f[idx_h1]
-            # h1 = db(H)[idx_h1]
-
-            # print((h0, f0), (h1, f1))
-            # print(abs(h0-h1)/log2(f1/f0))
-
-            ax[0].semilogx(f, db(H), **kw)
-            ax[1].semilogx(f, np.angle(H, deg=True), **kw)
-
-        # plot()
-        # if _G_desire > 0:
-        #     if db(H).max() < _G_desire+3 and db(H)[0] > _G_desire-3:
-        #         n_desire.append(log2(n))
-        #         plot()
-
-        # elif _G_desire < 0:
-        #     if db(H).min() > _G_desire-3 and db(H)[0] < _G_desire+3:
-        #         n_desire.append(log2(n))
-        #         plot()
-
-    # Gmin, Gmax = plt.ylim()
-
-    from src import (
-        shelf,
-        peaking,
-        bandpass,
-        lowpass,
-        notch,
-        allpass,
-        shelf,
-    )
-    from scipy.signal import freqz
-
-    btype = "low"
-    ftype = "half", "outer", "inner"
-    slide = 1
-
-    boost = _G_desire
-
-    frame_size = 4096 * 8
-    Wn = 2 * fc / fs  # 2 * pi * normalized_frequency
-
-    fc = 1000 * 2 ** np.arange(-6, 5, dtype=float)
-    Wn = 2 * fc / fs
-    # b, a = peaking(Wn=wn, dBgain=boost, Q=1/sqrt(2), type='constantq',
-    #                 analog=False, output='ba')
-    # b, a = shelf(Wn=wn, dBgain=boost, S=1, btype=btype, ftype=ftype[0],
-    #             analog=False, output='ba')
-    # w, h = freqz(b, a, frame_size)
-    # freq=w * fs * 1.0 / (2 * np.pi)
-
-    for wn in Wn:
-        print(wn)
-        # b, a = shelf(Wn=wn, dBgain=g, Q=1/sqrt(2), btype=btype, ftype=ftype[0],
-        #             analog=False, output='ba')
-        b, a = lowpass(Wn=wn, Q=1 / sqrt(2), analog=False, output="ba")
-
-        w, h = freqz(b, a, frame_size)
-        freq = w * fs * 1.0 / (2 * np.pi)
-
-        # ax[0].plot(freq, 20 * log10(abs(h)), label='Previous', color='orange')
-        ax[0].semilogx(freq, 20 * log10(abs(h)))
-        ax[1].semilogx(freq, np.angle(h, deg=True))
-
-    ax[0].plot(freq, 20 * log10(abs(h)), color="orange", label="Previous")
-    ax[1].plot(freq, np.angle(h, deg=True), color="orange", label="Previous")
-
-    # decorations
-    ax[0].set_xlim(flim)
-    # plt.ylim(Gmin, Gmax)
-    ax[0].set_xticks(fticks)
-    ax[0].set_xticklabels(fticklabels)
-    ax[0].minorticks_off()
-    ax[0].grid(True)
-    ax[0].set_xlabel("Frequency in Hz")
-    ax[0].set_ylabel("Level in dB")
-
-    ax[1].set_xlim(flim)
-    # ax[1].set_ylim(phimin, phimax)
-    ax[1].set_xticks(fticks)
-    ax[1].set_xticklabels(fticklabels)
-    ax[1].minorticks_off()
-    # ax[1].yaxis.set_major_locator(MultipleLocator(15))
-    # ax[1].yaxis.set_minor_locator(MultipleLocator(5))
-    ax[1].grid(True)
-    ax[1].set_xlabel("Frequency in Hz")
-    ax[1].set_ylabel(r"Phase in degree")
-    # ax[2].axis([0.76, 1.04, -0.14, 0.14])
-    # ax[2].grid(True)
-    # ax[2].set_aspect('equal')
-    # ax[2].set_ylabel(r'$\Im (z)$')
-    # ax[2].set_xlabel(r'$\Re (z)$')
-    # ax[2].xaxis.set_major_locator(MultipleLocator(0.1))
-    # ax[2].yaxis.set_major_locator(MultipleLocator(0.1))
-
-    # ax[0].axvline(x=fc, color='r', label='cut-off frequency', linestyle='--', lw=2)
-    # ax[0].axvline(x=fc, color='r', linestyle='--', lw=2)
-    # ax[0].legend(loc='upper right', prop=dict(weight='bold'))
-    # ax[1].axvline(x=fc, color='r', linestyle='--', lw=2)
-    # ax[1].legend(loc='upper right', prop=dict(weight='bold'))
-
-    plt.get_current_fig_manager().full_screen_toggle()
-
-    plt.show()
-
-
-def paper_plot_sheving_filter_digital():
+def plot_sheving_filter_digital():
     """Filter design using biquad filter cookbook
         in digial domain
     """
@@ -599,7 +361,6 @@ def paper_plot_sheving_filter_digital():
         )
         w, h = freqz(b, a, frame_size)
         freq = w * fs * 1.0 / (2 * np.pi)
-
         angle = 180 * np.angle(h) / pi  # Convert to degrees
 
         plt.plot(freq, 20 * log10(abs(h)), "r")
@@ -616,12 +377,9 @@ def paper_plot_sheving_filter_digital():
         )
         w, h = freqz(b, a, frame_size)
         freq = w * fs * 1.0 / (2 * np.pi)
-
         angle = 180 * np.angle(h) / pi  # Convert to degrees
 
         plt.plot(freq, 20 * log10(abs(h)), "b")
-        # ax[0].plot(freq, 20 * log10(abs(h)), 'b')
-        # ax[1].plot(freq, angle, 'r')
 
     plt.xscale("log")
     plt.title(f"shelving filter, Frequency Response")
@@ -637,30 +395,10 @@ def paper_plot_sheving_filter_digital():
     plt.grid(True, color="0.7", linestyle="-", which="major", axis="both")
     plt.grid(True, color="0.9", linestyle="-", which="minor", axis="both")
 
-    # plt.xlim(0.1, 1000)
-    # ax[0].xlabel('Frequency [Hz]')
-    # ax[0].ylabel('Amplitude [dB]')
-    # ax[0].yticks(range(-24, 25, 3))
-    # ax[0].margins(0, 0.1)
-    # ax[0].grid(True, color='0.7', linestyle='-', which='major', axis='both')
-    # ax[0].grid(True, color='0.9', linestyle='-', which='minor', axis='both')
-
-    # plt.xlim(0.1, 1000)
-    # ax[1].xlabel('Frequency [Hz]')
-    # ax[1].ylabel('Amplitude [dB]')
-    # ax[0].yticks(range(-24, 25, 3))
-    # ax[1].margins(0, 0.1)
-    # ax[1].grid(True, color='0.7', linestyle='-', which='major', axis='both')
-    # ax[1].grid(True, color='0.9', linestyle='-', which='minor', axis='both')
-
-    # outdir=''
-    # name=f'{test}_{btype}_gain_-24_24'
-    # plt.savefig(f'{outdir}/{name}_S_{slide}.pdf')
-
     plt.show()
 
 
-def paper_plot_sheving_filter_analog():
+def plot_sheving_filter_analog():
     """Filter design using biquad filter cookbook
         in analog domain
     """
@@ -755,256 +493,20 @@ def paper_all_pass_filter():
     plt.show()
 
 
-def generator_test_vector_grahpical_equalizer():
-    sampling_frequency = 44100
-
-    # cuf-off freuqency case 1
-    cutoff_frequency = np.array(
-        (
-            20,
-            25,
-            31.5,
-            40,
-            50,
-            63,
-            80,
-            100,
-            125,
-            160,
-            200,
-            250,
-            315,
-            400,
-            500,
-            630,
-            800,
-            1000,
-            1250,
-            1600,
-            2000,
-            2500,
-            3150,
-            4000,
-            5000,
-            6300,
-            8000,
-            10000,
-            12500,
-            16000,
-            20000,
-        )
-    )
-
-    # gain
-    num_case = 5
-    test_gain_list = np.zeros(shape=(num_case, len(cutoff_frequency)))
-
-    # case 1
-    test_gain_list[0, :] = np.array(
-        [
-            12,
-            12,
-            10,
-            8,
-            4,
-            1,
-            0.5,
-            0,
-            0,
-            6,
-            6,
-            12,
-            6,
-            6,
-            -12,
-            12,
-            -12,
-            -12,
-            -12,
-            -12,
-            0,
-            0,
-            0,
-            0,
-            -3,
-            -6,
-            -9,
-            -12,
-            0,
-            0,
-            0,
-        ]
-    )
-
-    # case 2
-    test_gain_list[1, 0::2] = 12
-    test_gain_list[1, 1::2] = -12
-
-    # case 3
-    test_gain_list[2, np.where(cutoff_frequency == 2000)] = 12
-
-    # case 4
-    test_gain_list[3, :] = np.ones_like(cutoff_frequency) * 12
-
-    # case 5
-    test_gain_list[4, 0::3] = 0
-    test_gain_list[4, 1::3] = 0
-    test_gain_list[4, 2::3] = 12
-
-    # cut-off frequency case 2, cutoff frequency with bandwith
-    f_bandwidth = np.array(
-        [
-            2.3,
-            2.9,
-            3.6,
-            4.6,
-            5.8,
-            7.3,
-            9.3,
-            11.6,
-            14.5,
-            18.5,
-            23.0,
-            28.9,
-            36.5,
-            46.3,
-            57.9,
-            72.9,
-            92.6,
-            116,
-            145,
-            185,
-            232,
-            290,
-            365,
-            463,
-            579,
-            730,
-            926,
-            1158,
-            1447,
-            1853,
-            2316,
-        ]
-    )
-    f_upperband = np.array(
-        [
-            22.4,
-            28.2,
-            35.5,
-            44.7,
-            56.2,
-            70.8,
-            89.1,
-            112,
-            141,
-            178,
-            224,
-            282,
-            355,
-            447,
-            562,
-            708,
-            891,
-            1120,
-            1410,
-            1780,
-            2240,
-            2820,
-            3550,
-            4470,
-            5620,
-            7080,
-            8910,
-            11200,
-            14100,
-            17800,
-            22050,
-        ]
-    )
-    f_lowerband = np.zeros_like(f_upperband)
-    f_lowerband[0] = 17.5
-    f_lowerband[1:] = f_upperband[:-1]
-
-    cutoff_frequency_bandwidth = np.zeros((2, len(cutoff_frequency)))
-    cutoff_frequency_bandwidth[0, :] = np.append(10, f_upperband[:-1])
-    cutoff_frequency_bandwidth[1, :] = cutoff_frequency
-    cutoff_frequency_bandwidth = cutoff_frequency_bandwidth.reshape(
-        (cutoff_frequency_bandwidth.shape[0] * cutoff_frequency_bandwidth.shape[1],),
-        order="F",
-    )
-
-    test_gain_bandwidth_list = np.zeros(
-        shape=(num_case, cutoff_frequency_bandwidth.shape[0])
-    )
-
-    for id_test_gain, test_gain in enumerate(test_gain_list):
-        buf_test_gain = np.zeros((2, len(cutoff_frequency)))
-        buf_test_gain[0, :] = test_gain
-        buf_test_gain[1, :] = test_gain
-        buf_test_gain = buf_test_gain.reshape(
-            (buf_test_gain.shape[0] * buf_test_gain.shape[1],), order="F"
-        )
-        buf_test_gain[1:] = buf_test_gain[:-1]
-        buf_test_gain[0] = 0
-
-        test_gain_bandwidth_list[id_test_gain, :] = buf_test_gain[:]
-
-    cutoff_frequency = cutoff_frequency.tolist()
-    test_gain_list = test_gain_list.tolist()
-
-    cutoff_frequency_bandwidth = cutoff_frequency_bandwidth.tolist()
-    test_gain_bandwidth_list = test_gain_bandwidth_list.tolist()
-    
-    test_vector_graphical_equalizer = json.dumps(
-        {
-            "1": {
-                "sampling_frequency": sampling_frequency,
-                "cutoff_frequency": cutoff_frequency,
-                "test_gain": test_gain_list,
-            },
-            "2": {
-                "sampling_frequency": sampling_frequency,
-                "cutoff_frequency": cutoff_frequency_bandwidth,
-                "test_gain": test_gain_bandwidth_list,
-            },
-        },
-        indent=4,
-    )
-    with open("./test/data/json/test_graphical_equalizer.json", "w") as f:
-        f.write(test_vector_graphical_equalizer)
-
-
 if __name__ == "__main__":
-    """ Fi command example 
-        fixed point <-> floating format parameter test
-    """
+    """ 1. Fi command example: fixed point <-> floating format parameter test """
     # example_fi()
     # iir_filter_fixed_to_floating_format_plot()
     # iir_filter_floating_to_fixed_format_print()
     # iir_filter_fixed_to_floating_format_process()
-    
-    """ Several types of filters and
-        Analysis analog and digital scope of pole and zeros in paper
-        
-        Reference.
-        Shelving Filter Cascade with Adjustable Transition Slope and Bandwidth, Schultz, Hahn, Spors 2020    
-    """
-    # paper_plot_cascade_sheving_filter()
-    # paper_plot_sheving_filter_digital()
-    # paper_plot_sheving_filter_analog()
 
-    """ Frequency wrapping in paper
-
-        Reference.
-        frequency-warped signal preprocessing for audio application, 2000
-    """
-    # paper_all_pass_filter()
-
-    """Logarithmic scale"""
+    """ 2. Logarithmic scale"""
     # scale_logarithmic()
 
-    """Test vector for parallel strucuture equalizer called graphical equalizer"""
-    # generator_test_vector_grahpical_equalizer()
+    """ 3. Analying the difference between digital and analog """
+    # plot_sheving_filter_digital()
+    # plot_sheving_filter_analog()
 
+    """4. Frequency wrapping """
+    # paper_all_pass_filter()
     pass

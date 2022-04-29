@@ -127,7 +127,7 @@ def lowpass(Wn, Q=1 / sqrt(2), analog=False, output="ba"):
 
     Analog prototype: H(s) = 1 / (s**2 + s/Q + 1)
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Corner frequency of the filter.
@@ -175,7 +175,7 @@ def highpass(Wn, Q=1 / sqrt(2), analog=False, output="ba"):
 
     Analog prototype: H(s) = s**2 / (s**2 + s/Q + 1)
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Corner frequency of the filter.
@@ -221,7 +221,7 @@ def bandpass(Wn, Q=1, type="skirt", analog=False, output="ba"):
     """
     Design an analog or digital biquad bandpass filter with variable Q.
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Center frequency of the filter.
@@ -286,7 +286,7 @@ def notch(Wn, Q=10, analog=False, output="ba"):
 
     Transfer function: H(s) = (s**2 + 1) / (s**2 + s/Q + 1)
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Center frequency of the filter.
@@ -329,7 +329,7 @@ def allpass(Wn, Q=1, analog=False, output="ba"):
 
     Transfer function:  H(s) = (s**2 - s/Q + 1) / (s**2 + s/Q + 1)
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Center frequency of the filter.
@@ -372,7 +372,7 @@ def peaking(Wn, dBgain, Q=None, BW=None, type="half", analog=False, output="ba")
 
     Used in graphic or parametric EQs.
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Center frequency of the filter.
@@ -399,7 +399,7 @@ def peaking(Wn, dBgain, Q=None, BW=None, type="half", analog=False, output="ba")
             gain (or +3 dB up from the cut gain), maintaining constant Q
             regardless of center frequency or boost gain.  This is
             symmetrical in dB, so that a boost and cut with identical
-            parameters sum to unity gain.
+            Parameter sum to unity gain.
             This is the method used in "Constant-Q" hardware equalizers.
             [ref: http://www.rane.com/note101.html]
             Klark Teknik calls this "symmetrical Q"
@@ -476,7 +476,7 @@ def shelf(
     """
     Design an analog or digital biquad shelving filter with variable Q.
 
-    Parameters
+    Parameter
     ----------
     Wn : float
         Turnover frequency of the filter, defined by the `ftype` parameter.
@@ -505,7 +505,7 @@ def shelf(
             Wn is defined as the point 3 dB up or down from the shelf's
             plateau.
             This is symmetrical in dB, so that a boost and cut with identical
-            parameters sum to unity gain.
+            Parameter sum to unity gain.
             This is defined using the location of the outer pole or zero of
             the filter (the lower of the two for a low shelf, higher of the
             two for a high shelf), so will not be exactly 3 dB at lower shelf
@@ -513,7 +513,7 @@ def shelf(
         ``inner``
             Wn is defined as the point 3 dB up or down from unity gain.
             This is symmetrical in dB, so that a boost and cut with identical
-            parameters sum to unity gain.
+            Parameter sum to unity gain.
     btype : {'low', 'high'}, optional
         Band type of the filter, low shelf or high shelf.
 

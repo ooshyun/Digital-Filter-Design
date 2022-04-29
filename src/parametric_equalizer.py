@@ -3,8 +3,13 @@ from scipy.signal import freqz
 
 
 class ParametricEqualizer(object):
-    def __init__(self, sampling_freq) -> None:
-        self.sampling_freq = sampling_freq
+    """Contain the serial structure of the filters (cascade)
+
+        This can get only coeffient b and a in fir and iir.
+    """
+
+    def __init__(self, sample_rate) -> None:
+        self.sample_rate = sample_rate
         self._coeff = []
 
     @property
@@ -19,7 +24,7 @@ class ParametricEqualizer(object):
             self._coeff.append(value)
 
     def freqz(self, full=False):
-        """Apply parametric filter to data
+        """Compute the frequency response of cascaded filters.
                          -jw                  -jw              -jwM
                 -jw   Bk(e  )    bk[0] + bk[1]e    + ... + bk[M]e
             H_k(e  ) = ------ = -----------------------------------
@@ -29,7 +34,7 @@ class ParametricEqualizer(object):
                -jwn               -jwn           
             H(e  ) =  \Pi H_k(e  )
         """
-        fs = self.sampling_freq
+        fs = self.sample_rate
         h = 1.0
 
         for b, a, _ in self._coeff:

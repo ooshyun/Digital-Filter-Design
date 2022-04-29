@@ -1,11 +1,11 @@
 """Wav source generator
     It contains sine tone, white noise and increasing tone generator.
 
-    ---
     TODO LIST
-        [ ] 1. Pink noise
-        [ ] 2. Brown noise
-        [ ] 3. Improved White noise 
+    ---------
+    - Pink noise
+    - Brown noise
+    - improved White noise 
 """
 import wave
 import math
@@ -20,7 +20,7 @@ from scipy.signal import chirp, sweep_poly, spectrogram
 import librosa, librosa.display
 
 
-def plot_fft(data: np.array, framesize: int, sampling_freq: int) -> None:
+def plot_fft(data: np.array, framesize: int, sample_rate: int) -> None:
     """Plot for frequency domain
 
     Args:
@@ -32,10 +32,10 @@ def plot_fft(data: np.array, framesize: int, sampling_freq: int) -> None:
 
     Raises:
     """
-    bins = np.arange(0, 10000) * sampling_freq / 10000
+    bins = np.arange(0, 10000) * sample_rate / 10000
     y_fft = np.fft.fft(data[:framesize])
-    plt.plot(bins[:math.trunc(sampling_freq / 2) + 1],
-             abs(y_fft[:math.trunc(sampling_freq / 2) + 1]))
+    plt.plot(bins[:math.trunc(sample_rate / 2) + 1],
+             abs(y_fft[:math.trunc(sample_rate / 2) + 1]))
     plt.show()
 
 
@@ -130,12 +130,12 @@ def create_whitenoise():
 def create_sinetone(frequency):
     """Create sine tone
 
-    Args:
+    Parameters
+    ----------
       frequency
 
-    Returns:
-        None
-    Raises:
+    Returns
+    -------
         None
     """
     fs = 44100
@@ -237,6 +237,7 @@ if __name__ == '__main__':
     # frequency = 5000
     # fs, wave = create_sinetone(frequency)
     #  wav.write('./sin' + str(frequency) + '.wav', fs, wave)
+
     """create 250-20k sine tone"""
     start, end = 250, 20000
     fs, wave = create_increase_sine_tone(start=start, end=end)

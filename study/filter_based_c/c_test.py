@@ -1,8 +1,4 @@
 """Test for c file
-    
-    TODO LIST
-    ---
-    [ ] 1. Test for _filt.c in python file
 """
 import matplotlib.pyplot as plt
 import numpy as np

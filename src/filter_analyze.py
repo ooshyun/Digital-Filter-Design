@@ -1,19 +1,6 @@
-"""Anaylzing the filter application
-
-    This is for plotting the frequency response of the filter.
-    It provides the parallel and cascades structure. The details of testing is on
-    main.py.
-    ---
-    TODO LIST
-    - FilterAnalyzerPlot.plot
-        [ ] 1. seperate serial equalizer structure
-        [ ] 2. how to treat a phase in serail equalizer ?
-        [ ] 3. Plot zero pole
-        [ ] 4. graphical equalizer implementation
-"""
 from math import inf
 import numpy as np
-from scipy.signal import freqz  # , freqs, tf2sos, sosfreqz, tf2zpk
+from scipy.signal import freqz
 import matplotlib.pyplot as plt
 
 from .graphic_equalizer import GraphicalEqualizer
@@ -23,28 +10,34 @@ from .util import (
     plot_pole_zero_analysis,
 )
 
-from .config import DEBUG
-
-if DEBUG:
-    from .debugging import maker_logger
-
-    PRINTER = maker_logger()
-
 
 class _Graph(object):
-    def __init__(self, sampling_freq, coeff, frequency_resp) -> None:
-        self.sampling_freq = sampling_freq
+    def __init__(self, sample_rate, coeff, frequency_resp) -> None:
+        self.sample_rate = sample_rate
         self.coeff = coeff
         self.frequency_resp = frequency_resp
 
 
 class FilterAnalyzePlot(object):
-    """Analyze filters using plot
+    """Anaylzing the filter application
+
+        This is for plotting the frequency response of the filter 
+        providing the parallel and cascades structure. 
+
+        Parameters
+        ----------
+        sample_rate (int): sample rate of the signal
+        graph_list (list): list of graph class object, which contains
+            _Graph, ParametricEqualizer, and GraphicalEqualizer
+
+        TODO LIST
+        ---------
+        self.plot: How to treat a phase in serail equalizer ?
     """
 
-    def __init__(self, sampling_freq=None) -> None:
+    def __init__(self, sample_rate=None) -> None:
         self.graph_list = []
-        self.sampling_freq = sampling_freq
+        self.sample_rate = sample_rate
 
     @property
     def filters(self):
@@ -56,7 +49,7 @@ class FilterAnalyzePlot(object):
         if isinstance(filter, ParametricEqualizer):
             self.graph_list.append(
                 _Graph(
-                    sampling_freq=filter.sampling_freq,
+                    sample_rate=filter.sample_rate,
                     coeff=filter.coeff,
                     frequency_resp=filter.freqz(),
                 )
@@ -65,14 +58,14 @@ class FilterAnalyzePlot(object):
         elif isinstance(filter, GraphicalEqualizer):
             self.graph_list.append(
                 _Graph(
-                    sampling_freq=filter.sampling_freq,
+                    sample_rate=filter.sample_rate,
                     coeff=filter.coeff,
                     frequency_resp=filter.freqz(show=False),
                 )
             )
         elif isinstance(filter, np.ndarray) or isinstance(filter, tuple):
-            if self.sampling_freq is None:
-                raise ValueError("sampling_freq must be given")
+            if self.sample_rate is None:
+                raise ValueError("sample_rate must be given")
             else:
                 if len(filter) == 2:
                     b, a = filter
@@ -81,12 +74,12 @@ class FilterAnalyzePlot(object):
                     b, a, d = filter
                 self.graph_list.append(
                     _Graph(
-                        sampling_freq=self.sampling_freq,
+                        sample_rate=self.sample_rate,
                         coeff=[(b, a, d),],
                         frequency_resp=freqz(
                             b=b,
                             a=a,
-                            worN=self.sampling_freq,
+                            worN=self.sample_rate,
                             whole=False,
                             include_nyquist=True,
                         ),
@@ -99,10 +92,15 @@ class FilterAnalyzePlot(object):
 
     def plot(self, type=["freq"], save_path=None, name=None):
         """Plot the filter
-            type
-                all: frequency response, phase response
-                freq: frequency response
-                phase: phase response
+            
+            Parameters
+            ----------
+                type (list): list of type of plot (str)
+                    "freq" - phase response(default)
+                    "phase" - frequency response
+                    "pole" - pole and zero response
+                save_path (str): path to save the plot
+                name (str): name of the plot
         """
         if len(self.graph_list) == 0:
             pass
@@ -115,7 +113,7 @@ class FilterAnalyzePlot(object):
                 self._savepath = save_path
 
             for graph in self.graph_list:
-                fs = graph.sampling_freq
+                fs = graph.sample_rate
                 (w, h) = graph.frequency_resp
                 coeff = graph.coeff
 

@@ -1,4 +1,4 @@
-"""Debug logging
+"""Logging for debug
 """
 import os
 import json
@@ -20,8 +20,26 @@ LOG_FORMAT = "[%(filename)s, line %(lineno)d) %(name)s:%(levelname)s - %(message
 logging.config.dictConfig(config)
 
 
-def maker_logger(name="None", mode=None, file_path=None, file_mode="a"):
-    """
+def maker_logger(name="None", mode=None, file_path=None):
+    """Make a object for logging using logging library
+   
+    Parameters
+    ----------
+        name (str, optional): Name of the logger.
+        mode (str, optional): Mode of the logger.
+        file_path (str, optional): Path of the file.
+
+    Returns
+    -------
+        logger: logging library logging object.
+    
+    Examples
+    --------
+    >> import logger
+    >> logger = maker_logger()
+    >> logger.debug("test")
+    >> logger.info("test")
+    >> logger.warning("test")
     """
     # 1 logger instance
     logger = logging.getLogger(name)
@@ -37,7 +55,7 @@ def maker_logger(name="None", mode=None, file_path=None, file_mode="a"):
     if file_path:
         file_handler = logging.FileHandler(filename=file_path)
     else:
-        file_handler = logging.FileHandler(filename=f"{path_lib}/example.log")
+        file_handler = logging.FileHandler(filename=f"{path_lib}/default.log")
 
     # 5 Set different level to each handler
     console.setLevel(logging.INFO)
@@ -52,10 +70,3 @@ def maker_logger(name="None", mode=None, file_path=None, file_mode="a"):
     logger.addHandler(file_handler)
 
     return logger
-
-
-if __name__ == "__main__":
-    _logger = maker_logger()
-    _logger.debug("test")
-    _logger.info("test")
-    _logger.warning("test")

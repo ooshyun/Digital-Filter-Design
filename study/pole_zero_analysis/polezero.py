@@ -6,7 +6,7 @@ import numpy as np
 import scipy.signal as signal
 import matplotlib.pyplot as plt
 
-SAMPLING_FREQUENCY = 128
+sample_rate = 128
 
 def freqz_scratch(b=None, a=None, worN=512, whole=False, include_nyquist=False):
     """
@@ -59,8 +59,8 @@ def test_freqz_scratch():
     b_coeff = np.array([b0, b1])
     a_coeff = None
 
-    w_scratch, H_scratch = freqz_scratch(b=b_coeff, worN=SAMPLING_FREQUENCY)
-    w, H = signal.freqz(b=b_coeff, worN=SAMPLING_FREQUENCY)
+    w_scratch, H_scratch = freqz_scratch(b=b_coeff, worN=sample_rate)
+    w, H = signal.freqz(b=b_coeff, worN=sample_rate)
 
     print(np.allclose(w, w_scratch))
     print(np.allclose(H, H_scratch))
@@ -121,7 +121,7 @@ def one_zero():
     for b1 in b1_list:
         b_coeff = np.array([b0, b1])
         a_coeff = None
-        w, H = signal.freqz(b=b_coeff, worN=SAMPLING_FREQUENCY)
+        w, H = signal.freqz(b=b_coeff, worN=sample_rate)
 
         ax[0].plot(w, np.abs(H), '.', label=f"b1={b1}")
         ax[0].set_title('Magnitude')
@@ -161,7 +161,7 @@ def one_pole():
     for a1 in a1_list:
         b_coeff = np.array([b0])
         a_coeff = np.array([a0, a1])
-        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=SAMPLING_FREQUENCY)
+        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=sample_rate)
 
         ax[0].plot(w, np.abs(H), '.', label=f"a1={a1}")
         ax[0].set_title('Magnitude')
@@ -208,7 +208,7 @@ def two_pole():
         b_coeff = np.array([b0])
         a_coeff = np.array([1, -2*R*np.cos(theta_c), R**2])
 
-        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=SAMPLING_FREQUENCY)
+        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=sample_rate)
 
         ax[0].plot(w, np.abs(H), '.', label=f"R={R}")
         ax[0].set_title('Magnitude')
@@ -255,7 +255,7 @@ def two_zero():
         b_coeff = np.array([b0, -b0*2*R*np.cos(theta_c), b0*R**2])
         a_coeff = np.array([1])
 
-        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=SAMPLING_FREQUENCY)
+        w, H = signal.freqz(b=b_coeff,a=a_coeff, worN=sample_rate)
 
         ax[0].plot(w, np.abs(H), '.', label=f"R={R}")
         ax[0].set_title('Magnitude')
@@ -283,7 +283,7 @@ def complex_resonator():
     R = np.exp(0.25*2*np.pi*1000/44100)
     # theta_c = np.pi/8
     theta_c = 2*np.pi*1000/44100
-    frame_size = SAMPLING_FREQUENCY
+    frame_size = sample_rate
     b0 = 1
 
 
@@ -291,14 +291,14 @@ def complex_resonator():
     p = R*np.exp(1j*theta_c)
     b_coeff = np.array([b0], dtype=complex)
     a_coeff = np.array([1, -p], dtype=complex)
-    w, H_one_pole = signal.freqz(b=b_coeff,a=a_coeff, worN=SAMPLING_FREQUENCY, whole=True)
+    w, H_one_pole = signal.freqz(b=b_coeff,a=a_coeff, worN=sample_rate, whole=True)
     H_one_pole = np.roll(H_one_pole, frame_size//2)     
     w -= np.pi
     
     p_conj = R*np.exp(-1j*theta_c)
     b_coeff = np.array([b0], dtype=complex)
     a_coeff = np.array([1, -p_conj], dtype=complex)
-    _, H_one_pole_conj = signal.freqz(b=b_coeff,a=a_coeff, worN=SAMPLING_FREQUENCY, whole=True)
+    _, H_one_pole_conj = signal.freqz(b=b_coeff,a=a_coeff, worN=sample_rate, whole=True)
     H_one_pole_conj = np.roll(H_one_pole_conj, frame_size//2)     
 
     # two pole

@@ -1,3 +1,5 @@
+"""Utility function for process to raw data
+"""
 from .util import (
     cvt_pcm2wav,
     cvt_float2fixed,
