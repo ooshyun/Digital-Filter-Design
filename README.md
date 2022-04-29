@@ -178,8 +178,8 @@ I designed **single filter such as peaking and shelving form, serial structure o
 
 Citation
 --------
+If any question, ask or contact to me!
 
-If any queestion, ask or contact to me!
 ```bibtex
 @article{,
   title={Digital Filter Design for Audio and Speech Processing},
