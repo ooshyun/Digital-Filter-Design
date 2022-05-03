@@ -8,5 +8,6 @@
 !hilbert_transform/
 !pole_zero_analysis/
 !process_wav_file/
-!filter_based_c
+!filter_based_c/
+!window/
 !*.py
