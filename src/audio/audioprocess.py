@@ -83,14 +83,14 @@ class ProcessUnit(object):
         mixed_data = np.mean(indata, axis=1)
 
         # signal processing
-        processed_data = self._stream_process(mixed_data)
+        processed_data = self._wola(mixed_data)
 
         # restore the data based on the number of channel
         processed_data = np.tile(processed_data, (channels, 1))
 
         return processed_data.T
 
-    def _stream_process(self, indata: np.ndarray):
+    def _wola(self, indata: np.ndarray):
         # time domain process
         if self.process_time_domain is None:
             processed_time_data = indata.copy()
@@ -102,7 +102,7 @@ class ProcessUnit(object):
             (self.pre_fft_buffer[self.frame_size :], processed_time_data)
         )
 
-        # windowing
+        # synthesis window
         self.windowed_pre_fft[:] = self.pre_fft_buffer * self.window_func
 
         # FFT, normalized
@@ -117,7 +117,7 @@ class ProcessUnit(object):
         # iFFT based on window size
         self.ifft_data[:] = np.real(np.fft.ifft(processed_fft_data))
 
-        # apply window, scale factor
+        # apply synthesis window, scale factor
         self.windowed_ifft[:] = self.ifft_data[: self.window_len] * self.window_func
 
         # overlapping
