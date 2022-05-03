@@ -49,7 +49,7 @@ This part is written in **main.py**, and the contents is as below,
 
     - analyze_filter
 
-Utility for understanding filters and implementing filter
+Utility for understanding and implementing filter
 ---------------------------------------------------------
 
 The contents is as below,
