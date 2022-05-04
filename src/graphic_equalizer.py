@@ -520,7 +520,9 @@ class GraphicalEqualizer(object):
         
         Reference
         ---------
-        Efficient Multi-Band Digital Audio Graphic Equalizer with Accurate Frequency Response Control.pdf
+        Oliver, Richard J., and Jean-Marc Jot. "Efficient multi-band digital audio 
+        graphic equalizer with accurate frequency response control." 
+        Audio Engineering Society Convention 139. Audio Engineering Society, 2015
     """
 
     def __init__(self, sample_rate, cufoff_freq: np.array, gain: np.array) -> None:
