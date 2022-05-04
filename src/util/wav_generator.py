@@ -34,8 +34,10 @@ def plot_fft(data: np.array, framesize: int, sample_rate: int) -> None:
     """
     bins = np.arange(0, 10000) * sample_rate / 10000
     y_fft = np.fft.fft(data[:framesize])
-    plt.plot(bins[:math.trunc(sample_rate / 2) + 1],
-             abs(y_fft[:math.trunc(sample_rate / 2) + 1]))
+    plt.plot(
+        bins[: math.trunc(sample_rate / 2) + 1],
+        abs(y_fft[: math.trunc(sample_rate / 2) + 1]),
+    )
     plt.show()
 
 
@@ -50,12 +52,12 @@ def _get_random(seeds, size):
     seed_count = 0
     gama = 0
     for i in range(size):
-        val = bin(seeds[seed_count]**2)
+        val = bin(seeds[seed_count] ** 2)
         val = val[2:]
         if len(val) > 32:
-            val = val[(len(val) - 32):]
+            val = val[(len(val) - 32) :]
         val = val.zfill(32)
-        val = val[0 + gama:16 + gama]
+        val = val[0 + gama : 16 + gama]
         val = int(val, 2)
         if gama == 15:
             gama = 0
@@ -120,11 +122,11 @@ def create_whitenoise():
     problem with overflow
 
     """
-    seeds = [65321, 12043, 2769]    # Seeds (1,2 and 3)
-    size = 160000    # Output samples for the random code
+    seeds = [65321, 12043, 2769]  # Seeds (1,2 and 3)
+    size = 160000  # Output samples for the random code
     Original_array = _get_random(seeds, size)
     print(type(Original_array), Original_array.dtype)
-    wav.write('./whiteNoise.wav', 16000, Original_array)
+    wav.write("./whiteNoise.wav", 16000, Original_array)
 
 
 def create_sinetone(frequency):
@@ -171,7 +173,7 @@ def create_increase_sine_tone(start=125, end=20000, samplingrate=44100):
     frequency_sampling = samplingrate
     period = 10
     time = np.arange(0, int(period * frequency_sampling)) / frequency_sampling
-    wave = chirp(time, f0=start, f1=end, t1=period, method='linear')
+    wave = chirp(time, f0=start, f1=end, t1=period, method="linear")
     return frequency_sampling, wave
 
 
@@ -206,11 +208,13 @@ def analyze_stft(samplingrate, wave, style="specshow"):
     win_length = 1024
     # audio_sample, fs = librosa.load(
     #     "/Users/seunghyunoh/workplace/Project/OliveUnion/RealtimeDSP/GUI_Compression/data/sin20000-250.wav", sr=None)
-    sdata = librosa.stft(wave,
-                         n_fft=fft_size,
-                         hop_length=hop_length,
-                         win_length=win_length,
-                         window=signal.hann)
+    sdata = librosa.stft(
+        wave,
+        n_fft=fft_size,
+        hop_length=hop_length,
+        win_length=win_length,
+        window=signal.hann,
+    )
     S = np.abs(sdata)
 
     # FFT -> plot
@@ -222,17 +226,17 @@ def analyze_stft(samplingrate, wave, style="specshow"):
 
     if style == "specshow":
         plt.plot()
-        librosa.display.specshow(mag_n, y_axis='linear', x_axis='time', sr=fs)
-        plt.title('spectrogram')
+        librosa.display.specshow(mag_n, y_axis="linear", x_axis="time", sr=fs)
+        plt.title("spectrogram")
 
-    if style == 'line':
+    if style == "line":
         t = np.linspace(0, 24000, mag_db.shape[0])
         plt.plot(t, mag_db[:, 100].T)
-        plt.title('magnitude (dB)')
+        plt.title("magnitude (dB)")
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """create 5k sine tone"""
     # frequency = 5000
     # fs, wave = create_sinetone(frequency)
