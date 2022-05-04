@@ -13,7 +13,7 @@ from src import (
     fi,
 )
 
-LIBRARY_PATH = "./"
+LIBRARY_PATH = "./" # First of all, it need to set the library(or this project) path
 
 
 def example_fi():
