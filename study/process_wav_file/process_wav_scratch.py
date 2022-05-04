@@ -39,6 +39,7 @@ import numpy as np
 import scipy.io.wavfile as wav
 import sys
 
+
 def _print_progress(iteration, total, prefix="", suffix="", decimals=1, barLength=50):
     formatStr = "{0:." + str(decimals) + "f}"
     percent = formatStr.format(100 * (iteration / float(total)))

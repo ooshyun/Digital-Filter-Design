@@ -13,6 +13,9 @@ from src import (
     fi,
 )
 
+LIBRARY_PATH = "./"
+
+
 def example_fi():
     """Test fi command
     """
@@ -70,7 +73,7 @@ def example_fi():
     print("-" * 10)
     if zi_predict - zi < 10e-3:
         print(f"PASS, {zi}")
-    
+
     """final example"""
     x = 0xF9E68000  # Q 1.31
     b = 0x3DAC7C00  # Q 2.30
@@ -251,8 +254,10 @@ def iir_filter_fixed_to_floating_format_process():
     # Q 1.31, Lowpass
     coeff_freq_domain = fi(coeff_freq_domain, 0, 32, 31, 0, "Dec")
     coeff_freq_domain = np.array(coeff_freq_domain)
-    infile_path = "./test/data/wav/White Noise.wav"
-    outfile_path = "./test/result/wav/White Noise_lowpass_floating_cvt2binary32.wav"
+    infile_path = LIBRARY_PATH + "/test/data/wav/White Noise.wav"
+    outfile_path = (
+        LIBRARY_PATH + "/test/result/wav/White Noise_lowpass_floating_cvt2binary32.wav"
+    )
     fs, data = wav.read(infile_path)
 
     nfft = 256  # It is already designed
@@ -495,18 +500,18 @@ def paper_all_pass_filter():
 
 if __name__ == "__main__":
     """ 1. Fi command example: fixed point <-> floating format parameter test """
-    # example_fi()
-    # iir_filter_fixed_to_floating_format_plot()
-    # iir_filter_floating_to_fixed_format_print()
-    # iir_filter_fixed_to_floating_format_process()
+    example_fi()
+    iir_filter_fixed_to_floating_format_plot()
+    iir_filter_floating_to_fixed_format_print()
+    iir_filter_fixed_to_floating_format_process()
 
     """ 2. Logarithmic scale"""
-    # scale_logarithmic()
+    scale_logarithmic()
 
     """ 3. Analying the difference between digital and analog """
-    # plot_sheving_filter_digital()
-    # plot_sheving_filter_analog()
+    plot_sheving_filter_digital()
+    plot_sheving_filter_analog()
 
     """4. Frequency wrapping """
-    # paper_all_pass_filter()
+    paper_all_pass_filter()
     pass

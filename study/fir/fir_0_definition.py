@@ -15,9 +15,9 @@ def fir(frame, nTap):
     if isinstance(frame, np.ndarray):
         for index, value in enumerate(frame):
             if index < (nTap - 1):
-                output[index] = np.sum(frame[:index + 1]) / nTap
+                output[index] = np.sum(frame[: index + 1]) / nTap
             else:
-                output[index] = np.sum(frame[index - nTap + 1:index + 1]) / nTap
+                output[index] = np.sum(frame[index - nTap + 1 : index + 1]) / nTap
     else:
         pass
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     y_fir = fir(y, 5)
     _h = np.zeros(fs)
     _h[:5] = np.ones(5) * 1 / 5
-    y_fir_convolve = np.convolve(_h, y)[:len(y)]
+    y_fir_convolve = np.convolve(_h, y)[: len(y)]
 
     """ Get the Phase difference"""
     index_max = np.array(np.where(y == np.max(y)))
@@ -85,18 +85,18 @@ if __name__ == "__main__":
     subfigs = fig.subfigures(2, 1)
 
     axTop = subfigs[0].subplots(ncols=1, nrows=1)
-    subfigs[0].set_facecolor('0.75')
+    subfigs[0].set_facecolor("0.75")
     axTop.plot(x[:32], y[:32], "*")
     axTop.plot(x[:32], y_fir[:32], ".")
     # axTop.plot(y_fir_convolve[:32], "o")
     # axTop.plot(_h, "o")
-    axTop.set_xlabel('sample')
-    axTop.set_ylabel('amplitude')
+    axTop.set_xlabel("sample")
+    axTop.set_ylabel("amplitude")
     axTop.grid()
-    subfigs[0].suptitle('Time domain', fontsize='x-large')
+    subfigs[0].suptitle("Time domain", fontsize="x-large")
 
     axesBottom = subfigs[1].subplots(ncols=1, nrows=2)
-    subfigs[1].set_facecolor('0.75')
+    subfigs[1].set_facecolor("0.75")
     axesBottom[0].plot(x, amplitude, "*")
     axesBottom[0].grid()
 
@@ -104,14 +104,14 @@ if __name__ == "__main__":
     axesBottom[1].grid()
 
     for index, ax in enumerate(axesBottom):
-        ax.set_xlabel('sample')
+        ax.set_xlabel("sample")
         if index == 0:
-            ax.set_ylabel('amplitude')
+            ax.set_ylabel("amplitude")
         else:
-            ax.set_ylabel('phase')
-    subfigs[1].suptitle('Frequency domain', fontsize='x-large')
+            ax.set_ylabel("phase")
+    subfigs[1].suptitle("Frequency domain", fontsize="x-large")
 
-    fig.suptitle("DFT Result", fontsize='xx-large')
+    fig.suptitle("DFT Result", fontsize="xx-large")
     plt.show()
 
     """

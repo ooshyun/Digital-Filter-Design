@@ -65,6 +65,7 @@ def hilbert_from_scratch(u):
     v = ifft(U)
     return v
 
+
 def test_hilbert_from_scratch_time_domain():
     """Test hilbert transform from time-domain signal
     """
@@ -322,6 +323,7 @@ def test_even_odd_cross_matrix_2d():
     z = z.reshape((z.shape[0], z.shape[1] * z.shape[2]))
     z = np.append(z, np.ones((z.shape[0], 1)) * 1000, axis=1)
     print(z[0])
+
 
 if __name__ == "__main__":
 

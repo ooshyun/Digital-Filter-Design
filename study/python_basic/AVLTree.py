@@ -88,7 +88,7 @@ class AVLTree(object):
 
     def rrotate(self):
         # Rotate left pivoting on self
-        debug('Rotating ' + str(self.node.key) + ' right')
+        debug("Rotating " + str(self.node.key) + " right")
         A = self.node
         B = self.node.left.node
         T = B.right.node
@@ -99,7 +99,7 @@ class AVLTree(object):
 
     def lrotate(self):
         # Rotate left pivoting on self
-        debug('Rotating ' + str(self.node.key) + ' left')
+        debug("Rotating " + str(self.node.key) + " left")
         A = self.node
         B = self.node.right.node
         T = B.left.node
@@ -116,8 +116,7 @@ class AVLTree(object):
                 if self.node.right != None:
                     self.node.right.update_heights()
 
-            self.height = max(self.node.left.height,
-                              self.node.right.height) + 1
+            self.height = max(self.node.left.height, self.node.right.height) + 1
         else:
             self.height = -1
 
@@ -150,7 +149,12 @@ class AVLTree(object):
                 else:
                     replacement = self.logical_successor(self.node)
                     if replacement != None:  # sanity check
-                        debug("Found replacement for " + str(key) + " -> " + str(replacement.key))
+                        debug(
+                            "Found replacement for "
+                            + str(key)
+                            + " -> "
+                            + str(replacement.key)
+                        )
                         self.node.key = replacement.key
 
                         # replaced. Now delete the key from right child
@@ -202,7 +206,11 @@ class AVLTree(object):
         # We always need to make sure we are balanced
         self.update_heights()
         self.update_balances()
-        return (abs(self.balance) < 2) and self.node.left.check_balanced() and self.node.right.check_balanced()
+        return (
+            (abs(self.balance) < 2)
+            and self.node.left.check_balanced()
+            and self.node.right.check_balanced()
+        )
 
     def inorder_traverse(self):
         if self.node is None:
@@ -221,7 +229,7 @@ class AVLTree(object):
 
         return inlist
 
-    def display(self, level=0, pref=''):
+    def display(self, level=0, pref=""):
         """
         Display the whole tree. Uses recursive def.
         TODO: create a better display using breadth-first search
@@ -229,12 +237,17 @@ class AVLTree(object):
         self.update_heights()  # Must update heights before balances
         self.update_balances()
         if self.node is not None:
-            print('-' * level * 2, pref, self.node.key, "[" + str(self.height) + ":" + str(
-                self.balance) + "]", 'L' if self.is_leaf() else ' ')
+            print(
+                "-" * level * 2,
+                pref,
+                self.node.key,
+                "[" + str(self.height) + ":" + str(self.balance) + "]",
+                "L" if self.is_leaf() else " ",
+            )
             if self.node.left is not None:
-                self.node.left.display(level + 1, '<')
+                self.node.left.display(level + 1, "<")
             if self.node.left is not None:
-                self.node.right.display(level + 1, '>')
+                self.node.right.display(level + 1, ">")
 
 
 # Usage example
@@ -255,11 +268,7 @@ if __name__ == "__main__":
     a.display()
 
     print()
-    print(
-        "Input            :", inlist)
-    print(
-        "deleting ...       ", 3)
-    print(
-        "deleting ...       ", 4)
-    print(
-    "Inorder traversal:", a.inorder_traverse())
+    print("Input            :", inlist)
+    print("deleting ...       ", 3)
+    print("deleting ...       ", 4)
+    print("Inorder traversal:", a.inorder_traverse())

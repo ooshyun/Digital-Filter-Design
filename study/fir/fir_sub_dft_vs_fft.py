@@ -13,20 +13,25 @@ def is_pow2(n):
 def dft(xs):
     """naive dft"""
     n = len(xs)
-    return [sum((xs[k] * iexp(-2 * math.pi * i * k / n) for k in range(n)))
-            for i in range(n)]
+    return [
+        sum((xs[k] * iexp(-2 * math.pi * i * k / n) for k in range(n)))
+        for i in range(n)
+    ]
 
 
 def dftinv(xs):
     """naive dft"""
     n = len(xs)
-    return [sum((xs[k] * iexp(2 * math.pi * i * k / n) for k in range(n))) / n
-            for i in range(n)]
+    return [
+        sum((xs[k] * iexp(2 * math.pi * i * k / n) for k in range(n))) / n
+        for i in range(n)
+    ]
 
 
 def fft_(xs, n, start=0, stride=1):
     "cooley-turkey fft"
-    if n == 1: return [xs[start]]
+    if n == 1:
+        return [xs[start]]
     hn, sd = n // 2, stride * 2
     rs = fft_(xs, hn, start, sd) + fft_(xs, hn, start + stride, sd)
     for i in range(hn):
@@ -43,7 +48,8 @@ def fft(xs):
 
 def fftinv_(xs, n, start=0, stride=1):
     "cooley-turkey fft"
-    if n == 1: return [xs[start]]
+    if n == 1:
+        return [xs[start]]
     hn, sd = n // 2, stride * 2
     rs = fftinv_(xs, hn, start, sd) + fftinv_(xs, hn, start + stride, sd)
     for i in range(hn):

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as intep
 import scipy.signal as signal
 
+
 def swanal(t, f, fs, amp, phase, B, A):
     """sine wave analysis
         Reference. https://ccrma.stanford.edu/~jos/fp/Sine_Wave_Analysis.html
@@ -18,7 +19,7 @@ def swanal(t, f, fs, amp, phase, B, A):
         len_a = 1
     else:
         len_a = len(A)
-    
+
     len_delay = max(len_b, len_a)
 
     ampin = amp
@@ -51,7 +52,7 @@ def real_sine_wave_analysis(flag_plot=False):
 
         Reference. https://ccrma.stanford.edu/~jos/fp/Sine_Wave_Analysis.html
     """
-    
+
     # 1. Using equation f(y) = g(x)
     sampling_rate = 44100
     dt = 1 / sampling_rate
@@ -92,13 +93,13 @@ def real_sine_wave_analysis(flag_plot=False):
 
     # 2. Using cofficient
     EPS = 10e-5
-    B = [1, 1]      # filter feedforward coefficients y[n] = x[n] + x[n-1]
-    A = 1           # filter feedback coefficients (none)
-    N = 10          # number of sinusoidal test frequencies
+    B = [1, 1]  # filter feedforward coefficients y[n] = x[n] + x[n-1]
+    A = 1  # filter feedback coefficients (none)
+    N = 10  # number of sinusoidal test frequencies
 
-    fs = 1          # sampling rate in Hz (arbitrary)
-    T = 1 / fs      # sampling interval in seconds
-    fmax = fs / 2   # highest frequency to look at
+    fs = 1  # sampling rate in Hz (arbitrary)
+    T = 1 / fs  # sampling interval in seconds
+    fmax = fs / 2  # highest frequency to look at
     df = fmax / (N - 1)  # spacing between frequencies
     f = np.linspace(0, fmax, N, endpoint=True)  # sampled frequency axis
     tmax = 1 / df  # 1 cycle at lowest non-dc freq
@@ -366,7 +367,8 @@ def group_delay(flag_plot=False):
 
         plt.show()
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     """ Phase and Group Delay"""
     real_sine_wave_analysis(flag_plot=False)
     complex_sine_wave_anaylsis(flag_plot=False)

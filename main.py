@@ -18,14 +18,13 @@ from src import (
 if DEBUG:
     PRINTER = maker_logger()
 
-ROOT = os.getcwd()
+LIBRARY_PATH = "./"
 
 
 def filter_plot():
     from src import lowpass, highpass, bandpass, notch, peaking, shelf, allpass
 
-    curr_path = os.getcwd()
-    data_path = os.path.join(curr_path, "test/data/wav/")
+    data_path = os.path.join(LIBRARY_PATH, "test/data/wav/")
     file_name = "White Noise.wav"
     result_path = ""
 
@@ -63,11 +62,10 @@ def filter_process():
     """
     from src import peaking, shelf
 
-    curr_path = os.getcwd()
-    data_path = os.path.join(curr_path, "test/data/wav/")
+    data_path = LIBRARY_PATH + "/test/data/wav/"
     file_name = "White Noise.wav"
 
-    outfile_path = "./test/result/wav/"
+    outfile_path = LIBRARY_PATH + "/test/result/wav/"
 
     infile_path = os.path.join(data_path, file_name)
     fs, data = wav.read(infile_path)
@@ -108,7 +106,7 @@ def serial_equalizer_plot():
     """
     from src import peaking
 
-    data_path = "./test/data/wav/"
+    data_path = LIBRARY_PATH + "/test/data/wav/"
     infile_path = os.path.join(data_path, "White Noise.wav")
     fs, _ = wav.read(infile_path)
 
@@ -129,8 +127,8 @@ def serial_equalizer_process():
     """
     from src import peaking
 
-    data_path = "./test/data/wav/"
-    result_path = "./test/result/wav/"
+    data_path = LIBRARY_PATH + "/test/data/wav/"
+    result_path = LIBRARY_PATH + "/test/result/wav/"
     infile_path = os.path.join(data_path, "White Noise.wav")
     fs, _ = wav.read(infile_path)
 
@@ -375,12 +373,12 @@ def generator_test_vector_grahpical_equalizer():
         },
         indent=4,
     )
-    with open("./test/data/json/test_graphical_equalizer.json", "w") as f:
+    with open(LIBRARY_PATH + "/test/data/json/test_graphical_equalizer.json", "w") as f:
         f.write(test_vector_graphical_equalizer)
 
 
 def parallel_equalizer_plot():
-    with open("./test/data/json/test_graphical_equalizer.json", "r") as f:
+    with open(LIBRARY_PATH + "/test/data/json/test_graphical_equalizer.json", "r") as f:
         test_case = json.load(f)
 
     fs, fc, gain = (
@@ -397,11 +395,11 @@ def parallel_equalizer_plot():
     w, h = eq.freqz(show=True)
 
     file = "/test/data/txt/test_graphical_equalizer.txt"
-    eq.write_to_file(f"{ROOT}/{file}")
+    eq.write_to_file(f"{LIBRARY_PATH}/{file}")
 
 
 def parallel_equalizer_wav_process():
-    with open("./test/data/json/test_graphical_equalizer.json", "r") as f:
+    with open(LIBRARY_PATH + "/test/data/json/test_graphical_equalizer.json", "r") as f:
         test_case = json.load(f)
 
     fs, fc, gain = (
@@ -418,19 +416,19 @@ def parallel_equalizer_wav_process():
     # w, h = eq.freqz(show=True)
 
     txt_file = "/test/data/txt/test_graphical_equalizer.txt"
-    eq.write_to_file(f"{ROOT}/{txt_file}")
+    eq.write_to_file(f"{LIBRARY_PATH}/{txt_file}")
 
     """Test wav file processing of parallel structure of iir filter 
     """
-    data_path = "./test/data/wav/"
-    result_path = "./test/result/wav/"
+    data_path = LIBRARY_PATH + "/test/data/wav/"
+    result_path = LIBRARY_PATH + "/test/result/wav/"
 
     wav_file = "White Noise.wav"
     out_file = "White Noise_graphical_equalizer.wav"
     infile_path = os.path.join(data_path, wav_file)
     outfile_path = os.path.join(result_path, out_file)
 
-    coeff_text = open(f"{ROOT}/{txt_file}").read()
+    coeff_text = open(f"{LIBRARY_PATH}/{txt_file}").read()
     coeff_text = coeff_text.split("\n")[:-1]
     coeff_text = [text.split(" ") for text in coeff_text]
     cvt_char2num(coeff_text)
@@ -483,7 +481,7 @@ def analyze_filter():
     del peq
 
     """ Graphical filter analysis, parallel structure"""
-    with open("./test/data/json/test_graphical_equalizer.json", "r") as f:
+    with open(LIBRARY_PATH + "/test/data/json/test_graphical_equalizer.json", "r") as f:
         test_case = json.load(f)
 
     fs, fc, gain = (
@@ -511,18 +509,18 @@ if __name__ == "__main__":
     PRINTER.info("Hello Digital Signal Processing World!")
 
     """Single filter design"""
-    # filter_plot()
-    # filter_process()
+    filter_plot()
+    filter_process()
 
     """Serial structure of filters design"""
-    # serial_equalizer_plot()
-    # serial_equalizer_process()
+    serial_equalizer_plot()
+    serial_equalizer_process()
 
     """Parallel structure of filters design"""
-    # generator_test_vector_grahpical_equalizer()
-    # parallel_equalizer_plot()
-    # parallel_equalizer_wav_process()
+    generator_test_vector_grahpical_equalizer()
+    parallel_equalizer_plot()
+    parallel_equalizer_wav_process()
 
     """ Analyze filter"""
-    # analyze_filter()
+    analyze_filter()
     pass

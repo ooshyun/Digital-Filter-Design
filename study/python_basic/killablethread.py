@@ -15,6 +15,7 @@ import ctypes
 
 # --------------------------------------------------------------------------------------------------------------------------------------
 
+
 def _async_raise(tid, exctype):
     if tid is None:
         # Thread is not alive, Pass
@@ -35,6 +36,7 @@ def _async_raise(tid, exctype):
         # and you should call it again with exc=NULL to revert the effect"""
         ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
         raise SystemError("PyThreadState_SetAsyncExc failed")
+
 
 # import multiprocessing
 class KillableThread(threading.Thread):

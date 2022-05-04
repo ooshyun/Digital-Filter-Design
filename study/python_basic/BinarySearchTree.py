@@ -208,6 +208,7 @@ if __name__ == "__main__":
 
     print(a.traverse())
     import copy
+
     print("----- Deleting -------")
     test = copy.deepcopy(a)
     del_list = test.traverse()
