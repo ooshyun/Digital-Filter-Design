@@ -18,7 +18,7 @@ from src import (
 if DEBUG:
     PRINTER = maker_logger()
 
-LIBRARY_PATH = "./"
+LIBRARY_PATH = "./" # First of all, it need to set the library(or this project) path
 
 
 def filter_plot():
