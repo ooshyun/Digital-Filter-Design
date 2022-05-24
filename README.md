@@ -176,6 +176,10 @@ I designed **single filter such as peaking and shelving form, serial structure o
 	
 		![frequency response of peaking filter](test/result/img/example_parellel_filter_64_band.png)
 
+Reference
+---------
+Rämö, Jussi, Vesa Välimäki, and Balázs Bank. "High-precision parallel graphic equalizer." IEEE/ACM Transactions on Audio, Speech, and Language Processing 22.12 (2014): 1894-1904.
+
 Citation
 --------
 If any question, ask or contact to me!
