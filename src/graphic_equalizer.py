@@ -203,7 +203,7 @@ def genTargetResponse(
 
     # 2-e. minimum phase filter using hilbert transform, FFT and iFFT
     hilbert_transformer = hilbert(np.log(amp_target_linear).real).imag
-    hilbert_transformer = np.exp(-1j * hilbert_transformer)
+    hilbert_transformer = np.exp(1j * hilbert_transformer)
 
     if DEBUG_PLOT:
         amp_target_linear_plot = amp_target_linear.copy()
@@ -576,7 +576,7 @@ class GraphicalEqualizer(object):
         num_step = self.steps
 
         w = np.linspace(0, np.pi, num_step, endpoint=True)
-        zm = np.array([np.ones_like(w), np.exp(-1j * w), np.exp(-1j * 2 * w)])
+        zm = np.array([np.ones_like(w), np.exp(1j * w), np.exp(1j * 2 * w)])
         a_coeff = np.array(self.a).T
         b_coeff = np.array(self.b).T
         d = self.d
