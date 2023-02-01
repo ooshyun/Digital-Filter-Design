@@ -51,20 +51,21 @@ def fourier_transform_of_the_rectangular_window():
 
     figure = plt.figure(figsize=(10, 7))
 
+    window_plot = window_asinc_zero_phase
     ax = [0] * 3
 
     ax[0] = figure.add_subplot(121)
     ax[1] = figure.add_subplot(222)
     ax[2] = figure.add_subplot(224)
 
-    ax[0].plot(w, window_asinc_zero_phase)
+    ax[0].plot(w, window_plot)
     ax[0].set_yticks(np.arange(-4, 14, 2))
     ax[0].set_xlabel("Normalized Frequency w (rad/sample)")
     ax[0].set_ylabel("amplitude")
     ax[0].set_title("DFT Rectangle Window, M=11")
     ax[0].grid(True)
 
-    ax[1].plot(w, 20 * np.log10(np.abs(window_asinc_zero_phase / M)))
+    ax[1].plot(w, 20 * np.log10(np.abs(window_plot / M)))
     ax[1].set_yticks(np.arange(-40, 5, 5))
     ax[1].set_ylim((-40, 0))
     ax[1].set_xlabel("Normalized Frequency w (rad/sample)")
@@ -72,7 +73,7 @@ def fourier_transform_of_the_rectangular_window():
     ax[1].set_title("DFT Rectangle Window, M=11")
     ax[1].grid(True)
 
-    ax[2].plot(w, np.angle(window_asinc_zero_phase))
+    ax[2].plot(w, np.angle(window_plot))
     ax[2].set_xlabel("Normalized Frequency w (rad/sample)")
     ax[2].set_ylabel("phase")
     ax[2].set_title("DFT Rectangle Window, M=11")
@@ -110,6 +111,6 @@ def roll_off_of_the_rectangular_window_fourier_transform():
 
 
 if __name__ == "__main__":
-    rectangle_window()
+    # rectangle_window()
     fourier_transform_of_the_rectangular_window()
-    roll_off_of_the_rectangular_window_fourier_transform()
+    # roll_off_of_the_rectangular_window_fourier_transform()
