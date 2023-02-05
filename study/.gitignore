@@ -11,4 +11,5 @@
 !filter_based_c/
 !window/
 !convolution/
+!wola/
 !*.py
