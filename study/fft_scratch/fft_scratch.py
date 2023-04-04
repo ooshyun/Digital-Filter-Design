@@ -8,7 +8,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fft import fft, dct, ifft, idct
+from scipy.fft import fft, ifft, dct, idct
 
 """Base on formula"""
 
@@ -51,31 +51,6 @@ def ifft_scratch(f, M=0):
     return ifft_result
 
 
-def dct_scratch(f, M=0):
-    """
-        DCT-1, T = 2M-2
-        Fk  = sigma_{m=0}^{2M-3}*f_m*e^{-j*pi*k/(M-1)*m}
-            = f_0 + (-1)^k*f_{M-1} + 2*sigma_{m=1}^{M-2}*f_m*cos(pi*k*(m-1)/(M-1)*m)
-        
-        DCT-1, Xk = Fk/2
-
-        DCT-2, T = 4M
-        F_k = 2*sigma_{m=0}^{M-1}*f_{2m+1}*cos(pi*k/2M*m)
-    """
-    raise NotImplementedError
-
-
-def idct_scratch(f, M=0):
-    """
-        iDCT-1
-        x_m = 1/(M-1) * [X_0 + (-1)^m*X_{M-1} + 2*sigma_{m=1}^{M-2}*X_m*cos(pi*m*(m-1)/(M-1)*m)] ]
-    """
-    raise NotImplementedError
-
-
-"""Base. Cooley and Tukey """
-
-
 def DFT_slow(x):
     """Compute the discrete Fourier Transform of the 1D array x"""
     x = np.asarray(x, dtype=float)
@@ -85,12 +60,12 @@ def DFT_slow(x):
     M = np.exp(-2j * np.pi * k * n / N)
     return np.dot(M, x)
 
+"""Base. Cooley and Tukey """
 
-def FFT(x):
+def FFT_(x):
     """A recursive implementation of the 1D Cooley-Tukey FFT
         Big O: O(NlogN)
     """
-
     x = np.asarray(x, dtype=float)
     N = x.shape[0]
 
@@ -99,8 +74,8 @@ def FFT(x):
     elif N <= 32:  # this cutoff should be optimized
         return DFT_slow(x)
     else:
-        X_even = FFT(x[::2])
-        X_odd = FFT(x[1::2])
+        X_even = FFT_(x[::2])
+        X_odd = FFT_(x[1::2])
         factor = np.exp(-2j * np.pi * np.arange(N) / N)
         return np.concatenate(
             [X_even + factor[: N // 2] * X_odd, X_even + factor[N // 2 :] * X_odd]
@@ -134,19 +109,19 @@ def FFT_vectorized(x):
 
     return X.ravel()
 
-
+# TODO
 def hfft_scratch(f, M=0):
     raise NotImplementedError
 
-
+# TODO
 def ihfft_scratch(f, M=0):
     raise NotImplementedError
 
-
+# TODO
 def rfft_scratch(f, M=0):
     raise NotImplementedError
 
-
+# TODO
 def irfft_scratch(f, M=0):
     raise NotImplementedError
 
@@ -156,10 +131,19 @@ if __name__ == "__main__":
     print("-" * 40)
 
     x = np.random.random(1024)
+    print("FFT scratch")
     print(np.allclose(fft_scratch(x), np.fft.fft(x)))
+    
+    print("DFT slow")
     print(np.allclose(DFT_slow(x), np.fft.fft(x)))
+    
+    print("Scipy fft vs Numpy fft")
     print(np.allclose(fft(x), np.fft.fft(x)))
-    print(np.allclose(FFT(x), np.fft.fft(x)))
+    
+    print("Recursive FFT")
+    print(np.allclose(FFT_(x), np.fft.fft(x)))
+    
+    print("Vectorize FFT")
     print(np.allclose(FFT_vectorized(x), np.fft.fft(x)))
 
     print("-" * 40)
@@ -175,7 +159,7 @@ if __name__ == "__main__":
     print("DFT_slow:", time.perf_counter() - curr_time)
     curr_time = time.perf_counter()
 
-    FFT(x)
+    FFT_(x)
     print("FFT:", time.perf_counter() - curr_time)
     curr_time = time.perf_counter()
 
@@ -203,7 +187,7 @@ if __name__ == "__main__":
     x = np.random.random(1024 * 16)
     curr_time = time.perf_counter()
 
-    FFT(x)
+    FFT_(x)
     print("FFT:", time.perf_counter() - curr_time)
     curr_time = time.perf_counter()
 
@@ -231,28 +215,29 @@ if __name__ == "__main__":
     sample_list = np.arange(0, total_time * fs)
     a_0 = np.sin(2 * np.pi * frequency * sample_list / fs)
     a_1 = np.sin(2 * np.pi * 2 * frequency * sample_list / fs)
-    a = (a_0 + a_1) / 2
-    n = len(a)
+    # a = (a_0 + a_1) / 2
+    a = a_0
+    n = 2048
     bins = np.arange(0, n) * fs / n
 
     a_fft_scratch = fft_scratch(a)
-    a_fft_numpy = np.fft.fft(a)
+    a_fft_numpy = np.fft.fft(a, n=n)
     a_fft_scipy = fft(a)
 
     a_ifft_scratch = ifft_scratch(a_fft_scratch)
     a_ifft_numpy = np.fft.ifft(a_fft_numpy)
     a_ifft_scipy = ifft(a_fft_scipy)
 
-    a_dct_scipy = dct(a)
-    a_idct_scipy = idct(a_dct_scipy)
+    fig, (ax0, ax1) = plt.subplots(nrows=2)
+    ax0.plot(a)
 
-    # plt.plot(bins, np.abs(a_fft_numpy/n), "o")
-    # plt.plot(bins, np.abs(a_fft_scipy/n), "x")
-    # try:
-    #     plt.plot(bins, np.abs(a_fft_scratch/n), ".", color="r")
-    # except ValueError:
-    #     pass
-    # plt.xticks(np.arange(0, 1100, 100))
-    # plt.yticks(np.arange(-1, 1.2, 0.2))
-    # plt.grid()
-    # plt.show()
+    try:
+        ax1.plot(bins, np.abs(a_fft_scratch/n), ".", color="r")
+    except ValueError:
+        pass
+    ax1.xticks(np.arange(0, 1100, 100))
+    ax1.yticks(np.arange(-1, 1.2, 0.2))
+    
+    plt.grid()
+    plt.show()
+

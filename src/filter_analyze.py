@@ -169,7 +169,6 @@ class FilterAnalyzePlot(object):
                     ax[iphase] = _fig.add_subplot(1, ncols, iphase + 1)
                 if _type & 0b100 == 0b100:
                     ax[ipole] = _fig.add_subplot(1, ncols, ipole + 1)
-
                 if _type & 0b001 == 0b001:
                     plot_frequency_response(
                         ax[ifreq],

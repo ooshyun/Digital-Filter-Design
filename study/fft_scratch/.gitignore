@@ -1,0 +1,7 @@
+**
+!.gitignore
+!*.py
+!*.c
+!*.ipynb
+!*.pdf
+!*.md

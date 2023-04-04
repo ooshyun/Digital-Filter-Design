@@ -1,0 +1,6 @@
+**
+!*.jpg
+!*.py
+!*.ipynb
+!*.gitignore
+!*.wav

@@ -40,20 +40,27 @@ def filter_plot():
 
     """Plot the several filters
     """
-    fc = 1033.59375
+    # fc = 1033.59375
+    fc = 8000
     gain = 6
     Q = 1 / np.sqrt(2)
     name = "Shelf Filter"
 
+    # IIR Biquid filter
     lowpass_filter = lowpass(Wn=2 * fc / fs, Q=Q)
-    highpass_filter = highpass(Wn=2 * fc / fs, Q=Q)
-    bandpass_filter = bandpass(Wn=2 * fc / fs, Q=Q)
-    notch_filter = notch(Wn=2 * fc / fs, Q=Q)
-    peak_filter = peaking(Wn=2 * fc / fs, Q=Q, dBgain=gain)
-    shelf_filter = shelf(Wn=2 * fc / fs, Q=Q, dBgain=gain)
-    allpass_filter = allpass(Wn=2 * fc / fs, Q=Q)
+    # highpass_filter = highpass(Wn=2 * fc / fs, Q=Q)
+    # bandpass_filter = bandpass(Wn=2 * fc / fs, Q=Q)
+    # notch_filter = notch(Wn=2 * fc / fs, Q=Q)
+    # peak_filter = peaking(Wn=2 * fc / fs, Q=Q, dBgain=gain)
+    # shelf_filter = shelf(Wn=2 * fc / fs, Q=Q, dBgain=gain)
+    # allpass_filter = allpass(Wn=2 * fc / fs, Q=Q)
 
-    ploter.filters = peak_filter
+    # fir filter
+    # current_filter = np.array([[0.12531781, 0.25063562, 0.12531781], [1, -0.77997063, 0.28124186]])
+    current_filter = np.array([[1, -0.97, 0], [1, 0, 0]])
+        
+    ploter.filters = current_filter
+
     ploter.plot(type=["freq", "phase", "pole"], save_path=None, name=name)
 
 
@@ -510,17 +517,17 @@ if __name__ == "__main__":
 
     """Single filter design"""
     filter_plot()
-    filter_process()
+    # filter_process()
 
-    """Serial structure of filters design"""
-    serial_equalizer_plot()
-    serial_equalizer_process()
+    # """Serial structure of filters design"""
+    # serial_equalizer_plot()
+    # serial_equalizer_process()
 
-    """Parallel structure of filters design"""
-    generator_test_vector_grahpical_equalizer()
-    parallel_equalizer_plot()
-    parallel_equalizer_wav_process()
+    # """Parallel structure of filters design"""
+    # generator_test_vector_grahpical_equalizer()
+    # parallel_equalizer_plot()
+    # parallel_equalizer_wav_process()
 
-    """ Analyze filter"""
-    analyze_filter()
-    pass
+    # """ Analyze filter"""
+    # analyze_filter()
+    # pass

@@ -3,6 +3,9 @@ Principle of convolution
 1. Invert the sequence of the second array
 2. Move one by one and sigma of multiplication
 
+in1 = [1, 2, 3]
+in2 = [0, 1, 0.5]
+
             1   2   3
   0.5   1   0
             0           = 0
