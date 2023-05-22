@@ -295,7 +295,7 @@ def genPolePosition(sample_rate: int, cutoff_freq: np.array):
             a pole and the conjugate of this pole as below,
                 H(s) = g_1 /(s - p_0) + g_2 /(s - \bar{p_0})
 
-            Before desinging, it need to set a Quality factor(or damping factor) defined as below,
+            Before designing, it need to set a Quality factor(or damping factor 1/(2Q)) defined as below,
                 p_0 = \omega_0 + j*w_0 \triangleq e^{j*theta_0}= e^{\omega_0}*e^{-j*w_0},  
                 Q = w_0 / 2*\omega_0,
                 
@@ -303,7 +303,7 @@ def genPolePosition(sample_rate: int, cutoff_freq: np.array):
             delta_theta_k/2 in logarithmic frequency(approximately 0.23 theta_k).
                 prof.
                     f_k = 10^{f_0+nk}, f_0 is the first cutoff frequency, nk is the k-th order.
-                    f_{k+1} - f_{k-1} = 10^{f_0+nk+1} - 10^{f_0+nk-1}
+                    f_{k+1} - f_{k-1} = 10^{f_0+nk+n} - 10^{f_0+nk-n}
                                         = 10^{f_0+nk}(10^n-10^{-n})
                     In this paper, n = 0.1 (n means the resolution of logarithmic frequency)
                     f_{k+1} - f_{k-1} = 10^{f_0+nk}(10^{0.1}-10^{-0.1})
@@ -311,16 +311,16 @@ def genPolePosition(sample_rate: int, cutoff_freq: np.array):
                                         = 0.46f_k , theta_k = 2*pi*f_k/fs
                     delta_theta_k = 0.46 theta_k
 
-                    following above sequency in k=0, k=N, 
+                    following above paper's equation in k=0, k=N since paper calculate the delta_theta_k/2 as delta_theta_k, 
                         e^{\omega_0} = e^{alpha_k*theta_k},
-                        alpha_k = 0.25, k=0
-                                    0.23, 0<k<N
-                                    0.20, k=N
-                    Finally, Q = w_k / 2*\omega_k = w_k / 2*alpha_k*theta_k = fs / 2*alpha_k 
+                        alpha_k =   0.25,     k = 0
+                                    0.23, 0 < k < N
+                                    0.20,     k = N
+                    Finally, Q = w_k / 2*\omega_k = w_k / 2*alpha_k*theta_k
             Then, 
-                Q = omega_k / 2*alpha_k*theta_k ~= 2
-            The value means usually underdamping by refering Q for critical damping = 1/2. 
-            * It can test the Q value complex_resonator function in study/pole_zero_position.py
+                Q = w_k / 2*\alpha_k*\theta_k ~= 2
+            The value means usually critical damping by refering critical damping factor = 1/2. 
+            * It can test the Q value complex_resonator function in study/pole_zero_analysis folder.
 
         Reference
         ---------
